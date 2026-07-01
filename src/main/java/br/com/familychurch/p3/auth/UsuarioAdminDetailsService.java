@@ -1,5 +1,7 @@
 package br.com.familychurch.p3.auth;
 
+import br.com.familychurch.p3.usuarioadmin.UsuarioAdmin;
+import br.com.familychurch.p3.usuarioadmin.UsuarioAdminRepository;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;

@@ -1,5 +1,6 @@
 package br.com.familychurch.p3.auth;
 
+import br.com.familychurch.p3.usuarioadmin.UsuarioAdmin;
 import java.util.Collection;
 import java.util.List;
 import org.springframework.security.core.GrantedAuthority;

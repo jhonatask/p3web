@@ -37,9 +37,12 @@ Usuario_Admin, Aula, Presenca, Avaliacao, Interesse) tera seu proprio
 subpacote com `controller`, `service`, `repository` e `dto` quando as tarefas
 seguintes os criarem, por exemplo `br.com.familychurch.p3.turma`.
 
-O pacote `br.com.familychurch.p3.auth` contem a entidade `UsuarioAdmin` e toda
-a infraestrutura de autenticacao/JWT (service de login, `JwtService`, filtro,
-`UserDetailsService`), ja que sao fortemente acoplados entre si.
+O pacote `br.com.familychurch.p3.usuarioadmin` contem a entidade `UsuarioAdmin`,
+o enum `Papel` e o `UsuarioAdminRepository`, seguindo a mesma convencao de
+`Curso`. O pacote `br.com.familychurch.p3.auth` contem a infraestrutura de
+autenticacao/JWT que consome essa entidade (service de login, `JwtService`,
+filtro, `UserDetailsService`) — nao e uma entidade de dominio, e sim um
+conjunto coeso de infraestrutura de seguranca, por isso fica separado.
 
 Pacotes transversais:
 

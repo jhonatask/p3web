@@ -1,5 +1,6 @@
 package br.com.familychurch.p3.auth;
 
+import br.com.familychurch.p3.usuarioadmin.UsuarioAdmin;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
