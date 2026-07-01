@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: p3
+  datasource:
+    url: jdbc:postgresql://localhost:5432/chamada
+    username: chamada
+    password: chamada
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
