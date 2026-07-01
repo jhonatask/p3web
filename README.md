@@ -93,16 +93,68 @@ Pacotes transversais:
 
 ## Banco de dados em testes
 
-O profile `test` (`src/test/resources/application-test.yml`) desabilita as
-autoconfiguracoes de datasource, JPA e Flyway, permitindo que o contexto Spring
-suba em testes sem depender do Postgres do `compose.yaml` estar no ar.
+Agora que as 4 features da Fase 1 (`Curso`, `Turma`, `Aluno`, autenticacao)
+tem entidades JPA e repositorios Spring Data reais, a estrategia anterior
+(desabilitar DataSource/JPA/Flyway no profile `test`) deixou de fazer sentido:
+qualquer teste que suba o contexto Spring precisa de um `DataSource` real para
+instanciar os repositorios. Ela foi substituida por **Testcontainers com
+Postgres real** (mesma imagem `postgres:16` usada em `compose.yaml`).
 
-Essa e uma decisao deliberada: como o modelo de dados vai usar tipos e
-funcionalidades especificas do Postgres, um banco em memoria (H2) mascararia
-incompatibilidades em vez de preveni-las. Quando as proximas tarefas
-adicionarem entidades JPA e repositorios, a estrategia de teste de integracao
-com banco real (via Testcontainers com Postgres) deve ser decidida e
-implementada naquele momento.
+`src/test/resources/application-test.yml` hoje so garante que
+`ddl-auto: validate` e o Flyway continuam ativos em teste (o schema dos testes
+de integracao e sempre criado pelas migrations reais, nunca pelo Hibernate).
+O `DataSource` em si nao e configurado ali: quem resolve isso e a classe base
+`br.com.familychurch.p3.IntegrationTestSupport`
+(`src/test/java/br/com/familychurch/p3/IntegrationTestSupport.java`), que
+sobe um container Postgres 16 via Testcontainers e o registra automaticamente
+como `DataSource` da aplicacao usando `@ServiceConnection`
+(`org.springframework.boot.testcontainers.service.connection.ServiceConnection`,
+recurso nativo do Spring Boot desde a serie 3.1, confirmado disponivel e
+funcional no Spring Boot 4.1.0 usado neste projeto) — sem precisar de
+`@DynamicPropertySource` manual para expor host/porta/credenciais do
+container.
+
+Motivo de manter Postgres real em vez de H2 em memoria: o mesmo registrado
+antes desta mudanca continua valido — o modelo de dados usa tipos e
+comportamento especificos do Postgres (e vai usar ainda mais nas proximas
+fases), e um banco em memoria mascararia incompatibilidades em vez de
+preveni-las.
+
+### Container compartilhado entre as classes de teste
+
+O container Postgres e um campo `static` em `IntegrationTestSupport`,
+iniciado uma unica vez em um bloco `static { }` e reutilizado por **todas** as
+classes de teste de integracao que estendem essa classe base (`CursoControllerIT`,
+`TurmaControllerIT`, `AlunoControllerIT`, `AuthControllerIT`,
+`P3ApplicationTests`) — pratica comum do Testcontainers ("singleton
+container") para nao pagar o custo de subir um container Postgres novo a cada
+classe de teste, o que deixaria a suite lenta. Cada classe ainda limpa os
+dados que criou (via `deleteAll()` nos repositorios, respeitando a ordem das
+foreign keys: aluno -> turma -> curso) em um `@BeforeEach`, garantindo
+isolamento entre os testes mesmo com o banco compartilhado.
+
+### Testes de integracao (`*IT`) rodando junto com `mvn test`
+
+Por padrao, o Maven Surefire (fase `test`) so roda classes terminadas em
+`*Test`/`*Tests`; o sufixo `*IT` e a convencao do Failsafe (fase
+`integration-test`), plugin que este projeto nao usa. Para atender ao
+requisito de rodar a suite inteira com um unico `.\mvnw.cmd test` (sem exigir
+`docker compose up -d` manual nem uma fase Maven separada), o
+`maven-surefire-plugin` foi configurado explicitamente em `pom.xml` para
+incluir tambem `**/*IT.java`, mantendo a nomenclatura `*IT` (mais idiomatica
+para sinalizar "teste de integracao, sobe contexto Spring completo") mas sem
+depender do Failsafe.
+
+### Autenticacao real nos testes de integracao
+
+Os testes que exercitam endpoints protegidos por JWT nao mockam o Spring
+Security: fazem login de verdade contra `POST /api/auth/login` usando o
+usuario admin semente (`admin@hombridade.local` / `hombridade2026`, inserido
+pela migration `V4__seed_usuario_admin.sql`), obtendo um token JWT real para
+enviar no header `Authorization` das chamadas seguintes. O metodo utilitario
+`IntegrationTestSupport.obterTokenAdmin()` centraliza esse fluxo. Isso testa a
+integracao completa (login -> geracao de token -> filtro JWT -> autorizacao),
+em vez de assumir que a autenticacao funciona.
 
 ## Autenticacao (Spring Security + JWT)
 
