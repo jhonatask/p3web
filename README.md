@@ -84,8 +84,10 @@ Pacotes transversais:
 
 - `config` — configuracao cross-cutting (seguranca, etc.). Contem
   `SecurityConfig`, que registra o `PasswordEncoder` (BCrypt), o filtro JWT e
-  a `SecurityFilterChain`: `/api/auth/**` e publico, o restante de `/api/**`
-  exige token valido, sessao stateless.
+  a `SecurityFilterChain`: `/api/auth/**` e `/api/publico/**` sao publicos, o
+  restante de `/api/**` exige token valido, sessao stateless. `/api/publico/**`
+  existe para o cadastro publico de `Aluno` (ver secao "Aluno" abaixo) e
+  qualquer outro fluxo futuro que precise ser acessado sem autenticacao.
 - `common` / `shared` — excecoes e utilitarios cross-cutting. Serao criados
   quando a primeira necessidade real aparecer nas proximas tarefas.
 
@@ -223,16 +225,109 @@ essa validacao nao existe do lado de `curso`.
 padrao de `CursoNaoEncontradoException`: usada quando a propria `Turma`
 buscada por id nao existe.
 
-## Migrations (Flyway)
+## Aluno
+
+`Aluno` segue a mesma estrutura de pacotes de `Curso`/`Turma`
+(`br.com.familychurch.p3.aluno` com subpacotes `.controller`, `.service`,
+`.repository`, `.dto`, `.exception`), mais um subpacote `.validation` com o
+validador de CPF (ver abaixo).
+
+### Cadastro publico via link da turma
+
+O aluno se cadastra **uma unica vez**, atraves de um link publico montado a
+partir do `tokenCadastro` da `Turma` (o mesmo token usado no `linkCadastro` de
+`TurmaResponse`), sem precisar instalar o app nem se autenticar:
+
+```
+POST /api/publico/turmas/{token}/alunos
+```
+
+Esse endpoint resolve a `Turma` pelo `tokenCadastro` recebido na URL — nunca
+pelo id interno da turma, ja que quem acessa o link publico so conhece o
+token. Para isso, o prefixo `/api/publico/**` foi liberado em
+`SecurityConfig` (`permitAll`, adicionado antes da regra geral de `/api/**`
+autenticado), sem alterar o restante da `SecurityFilterChain`.
+
+A listagem de alunos de uma turma, por outro lado, e uso interno da
+lideranca e segue o padrao de autenticacao ja existente:
+
+```
+GET /api/turmas/{turmaId}/alunos   (exige JWT, como o restante de /api/**)
+```
+
+Os dois endpoints ficam no mesmo `AlunoController`, mesmo com prefixos de URL
+diferentes, porque pertencem a mesma feature de dominio (`aluno`).
+
+### CPF unico globalmente, guardado em texto puro
+
+O modelo de dados tem `Aluno.turma_id` como FK simples para uma unica turma
+(um aluno pertence a uma turma so). Por isso a unicidade de CPF e **global**
+(`uk_aluno_cpf` na tabela, `AlunoRepository.existsByCpf`), nao apenas dentro
+da turma — o mesmo CPF nao pode se cadastrar em nenhuma turma se ja existe em
+outra.
+
+O documento tecnico (`../parte-tecnica-app-chamada.md`, secao 3, LGPD) sugere
+"considerar" guardar o CPF com hash ou criptografia. Essa tarefa optou por
+manter o CPF em **texto puro** no banco, decisao deliberada: a Fase 2 do
+roadmap (identificacao/check-in por CPF e busca manual do professor por CPF
+na marcacao de presenca) depende de buscar e exibir o CPF diretamente. Um
+hash impediria a busca por igualdade sem guardar o CPF em paralelo em outro
+formato, e criptografia reversivel exigiria decifrar em toda consulta sem
+ganho de seguranca real (a chave ficaria acessivel a mesma aplicacao). A
+ressalva do documento tecnico permanece valida como trabalho futuro:
+criptografia em repouso a **nivel de infraestrutura/banco** (ex: disco
+criptografado, `pgcrypto` com criptografia transparente, ou um servico de
+banco gerenciado com encryption at rest) pode ser avaliada depois, sem
+impedir a busca por igualdade que a Fase 2 exige — diferente de criptografar
+a coluna do lado da aplicacao.
+
+### Validacao de CPF
+
+CPF nao e validado so por tamanho/regex. Existe uma anotacao Bean Validation
+customizada, `@Cpf` (`br.com.familychurch.p3.aluno.validation.Cpf` +
+`CpfValidator`), que implementa o algoritmo padrao de digito verificador do
+CPF brasileiro (modulo 11 sobre os 9 primeiros digitos, calculado duas
+vezes) e rejeita tambem os classicos CPFs com todos os digitos iguais (ex:
+`111.111.111-11`), que passam no calculo do modulo 11 mas sao invalidos na
+pratica. `AlunoCadastroRequest.cpf` usa `@Cpf` diretamente, entao um CPF
+invalido e rejeitado automaticamente pelo mecanismo padrao de `@Valid` (400),
+sem logica extra no controller. O CPF e persistido apenas com digitos (a
+mascara `xxx.xxx.xxx-xx`, se enviada, e normalizada antes de salvar).
+
+### Consentimento LGPD
+
+`AlunoCadastroRequest.aceiteLgpd` precisa vir `true`; se vier `false` ou
+ausente (o tipo primitivo `boolean` default para `false`), o cadastro e
+rejeitado com `ConsentimentoLgpdObrigatorioException` (400) — nunca passa
+silenciosamente. O timestamp do consentimento (`consentimentoLgpdTimestamp`)
+e gerado no servidor no momento do processamento, assim como `dataCadastro`;
+nenhum dos dois e aceito do cliente, exatamente como pede a especificacao
+("prova" do momento do aceite).
+
+### Regras de negocio do cadastro (`AlunoServiceImpl`)
+
+Na ordem aplicada: (1) resolve a `Turma` pelo `tokenCadastro`, lancando
+`aluno.exception.TurmaNaoEncontradaException` se nao existir — uma variante
+local que recebe o token (`String`), diferente de
+`turma.exception.TurmaNaoEncontradaException` (que recebe o `id` da turma),
+ja que aqui a busca publica so conhece o token; (2) se a turma estiver
+`ENCERRADA`, rejeita com `TurmaEncerradaException` (409) — regra de negocio
+do cadastro de aluno, por isso vive em `aluno.exception` mesmo `Turma` sendo
+de outro pacote; (3) verifica duplicidade de CPF, `AlunoJaCadastradoException`
+(409); (4) valida o consentimento LGPD. A validacao de formato do CPF
+acontece antes, via `@Valid` no controller.
+
+### Migrations (Flyway)
 
 Migrations ficam em `src/main/resources/db/migration`, seguindo a convencao
 `Vx__descricao.sql`. `V1__init.sql` e um baseline minimo que apenas valida que
 o Flyway esta corretamente configurado; as migrations de dominio sao
 adicionadas nas proximas tarefas, uma por entidade/feature (`V2__create_curso_table.sql`
 e a primeira delas, seguida por `V3__create_usuario_admin_table.sql` e
-`V4__seed_usuario_admin.sql` para autenticacao, e `V5__create_turma_table.sql`
+`V4__seed_usuario_admin.sql` para autenticacao, `V5__create_turma_table.sql`
 para a tabela de `Turma`, com FK para `curso` e constraint de unicidade em
-`token_cadastro`).
+`token_cadastro`, e `V6__create_aluno_table.sql` para a tabela de `Aluno`, com
+FK para `turma` e constraint de unicidade global em `cpf`).
 
 `spring.jpa.hibernate.ddl-auto` esta como `validate`: o schema e sempre gerenciado
 pelo Flyway, nunca gerado automaticamente pelo Hibernate.
