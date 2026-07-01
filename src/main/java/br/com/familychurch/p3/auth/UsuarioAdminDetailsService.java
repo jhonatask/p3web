@@ -1,0 +1,24 @@
+package br.com.familychurch.p3.auth;
+
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Service;
+
+@Service
+class UsuarioAdminDetailsService implements UserDetailsService {
+
+	private final UsuarioAdminRepository usuarioAdminRepository;
+
+	UsuarioAdminDetailsService(UsuarioAdminRepository usuarioAdminRepository) {
+		this.usuarioAdminRepository = usuarioAdminRepository;
+	}
+
+	@Override
+	public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+		UsuarioAdmin usuarioAdmin = usuarioAdminRepository.findByEmailIgnoreCase(email)
+				.orElseThrow(() -> new UsernameNotFoundException("Usuario nao encontrado para o email '%s'".formatted(email)));
+		return new UsuarioAdminDetails(usuarioAdmin);
+	}
+
+}

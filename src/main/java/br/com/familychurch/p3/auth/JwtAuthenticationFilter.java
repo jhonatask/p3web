@@ -1,0 +1,55 @@
+package br.com.familychurch.p3.auth;
+
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import org.jspecify.annotations.NonNull;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+@Component
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+	private static final String PREFIXO_BEARER = "Bearer ";
+
+	private final JwtService jwtService;
+	private final UsuarioAdminDetailsService usuarioAdminDetailsService;
+
+	public JwtAuthenticationFilter(JwtService jwtService, UsuarioAdminDetailsService usuarioAdminDetailsService) {
+		this.jwtService = jwtService;
+		this.usuarioAdminDetailsService = usuarioAdminDetailsService;
+	}
+
+	@Override
+	protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response,
+			@NonNull FilterChain filterChain) throws ServletException, IOException {
+
+		String cabecalhoAutorizacao = request.getHeader("Authorization");
+
+		if (cabecalhoAutorizacao == null || !cabecalhoAutorizacao.startsWith(PREFIXO_BEARER)) {
+			filterChain.doFilter(request, response);
+			return;
+		}
+
+		String token = cabecalhoAutorizacao.substring(PREFIXO_BEARER.length());
+
+		if (jwtService.tokenValido(token) && SecurityContextHolder.getContext().getAuthentication() == null) {
+			String email = jwtService.extrairEmail(token);
+			UserDetails userDetails = usuarioAdminDetailsService.loadUserByUsername(email);
+
+			UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+					userDetails, null, userDetails.getAuthorities());
+			authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+			SecurityContextHolder.getContext().setAuthentication(authentication);
+		}
+
+		filterChain.doFilter(request, response);
+	}
+
+}

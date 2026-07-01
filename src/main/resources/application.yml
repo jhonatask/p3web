@@ -10,3 +10,8 @@ spring:
       ddl-auto: validate
   flyway:
     enabled: true
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:chave-secreta-de-desenvolvimento-nao-usar-em-producao-1234567890}
+    expiracao-minutos: ${JWT_EXPIRACAO_MINUTOS:60}
