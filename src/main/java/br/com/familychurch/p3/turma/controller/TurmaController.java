@@ -1,18 +1,14 @@
 package br.com.familychurch.p3.turma.controller;
 
-import br.com.familychurch.p3.curso.exception.CursoNaoEncontradoException;
 import br.com.familychurch.p3.turma.StatusTurma;
 import br.com.familychurch.p3.turma.dto.TurmaRequest;
 import br.com.familychurch.p3.turma.dto.TurmaResponse;
-import br.com.familychurch.p3.turma.exception.CursoInativoException;
-import br.com.familychurch.p3.turma.exception.TurmaNaoEncontradaException;
 import br.com.familychurch.p3.turma.service.TurmaService;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -58,21 +54,6 @@ public class TurmaController {
 	@PatchMapping("/{id}/encerrar")
 	public TurmaResponse encerrar(@PathVariable UUID id) {
 		return turmaService.encerrar(id);
-	}
-
-	@ExceptionHandler(TurmaNaoEncontradaException.class)
-	public ResponseEntity<String> tratarTurmaNaoEncontrada(TurmaNaoEncontradaException exception) {
-		return ResponseEntity.status(404).body(exception.getMessage());
-	}
-
-	@ExceptionHandler(CursoNaoEncontradoException.class)
-	public ResponseEntity<String> tratarCursoNaoEncontrado(CursoNaoEncontradoException exception) {
-		return ResponseEntity.status(404).body(exception.getMessage());
-	}
-
-	@ExceptionHandler(CursoInativoException.class)
-	public ResponseEntity<String> tratarCursoInativo(CursoInativoException exception) {
-		return ResponseEntity.status(409).body(exception.getMessage());
 	}
 
 }

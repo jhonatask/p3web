@@ -2,15 +2,12 @@ package br.com.familychurch.p3.curso.controller;
 
 import br.com.familychurch.p3.curso.dto.CursoRequest;
 import br.com.familychurch.p3.curso.dto.CursoResponse;
-import br.com.familychurch.p3.curso.exception.CursoJaExisteException;
-import br.com.familychurch.p3.curso.exception.CursoNaoEncontradoException;
 import br.com.familychurch.p3.curso.service.CursoService;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -60,16 +57,6 @@ public class CursoController {
 	@PatchMapping("/{id}/desativar")
 	public CursoResponse desativar(@PathVariable UUID id) {
 		return cursoService.desativar(id);
-	}
-
-	@ExceptionHandler(CursoJaExisteException.class)
-	public ResponseEntity<String> tratarCursoJaExiste(CursoJaExisteException exception) {
-		return ResponseEntity.status(409).body(exception.getMessage());
-	}
-
-	@ExceptionHandler(CursoNaoEncontradoException.class)
-	public ResponseEntity<String> tratarCursoNaoEncontrado(CursoNaoEncontradoException exception) {
-		return ResponseEntity.status(404).body(exception.getMessage());
 	}
 
 }
