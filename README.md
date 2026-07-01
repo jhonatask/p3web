@@ -63,8 +63,20 @@ implementada naquele momento.
 
 Migrations ficam em `src/main/resources/db/migration`, seguindo a convencao
 `Vx__descricao.sql`. `V1__init.sql` e um baseline minimo que apenas valida que
-o Flyway esta corretamente configurado; as migrations de dominio serao
-adicionadas nas proximas tarefas.
+o Flyway esta corretamente configurado; as migrations de dominio sao
+adicionadas nas proximas tarefas, uma por entidade/feature (`V2__create_curso_table.sql`
+e a primeira delas).
 
 `spring.jpa.hibernate.ddl-auto` esta como `validate`: o schema e sempre gerenciado
 pelo Flyway, nunca gerado automaticamente pelo Hibernate.
+
+## Escolha de chave primaria
+
+As entidades de dominio usam `UUID` como chave primaria (gerado pela aplicacao
+via Hibernate `@UuidGenerator`, nao pelo banco). Motivo: varias entidades do
+modelo (`Turma`, e por consequencia links de cadastro/check-in expostos
+publicamente) serao referenciadas por identificadores que acabam visiveis em
+URLs fora do app — UUID evita expor contagem/sequencia de registros e evita
+colisao ao combinar dados de ambientes diferentes (staging/producao) no
+futuro. O padrao estabelecido em `Curso` deve ser replicado pelas proximas
+entidades para manter consistencia.
