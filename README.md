@@ -167,6 +167,62 @@ Content-Type: application/json
 A resposta traz o `token` a ser usado no header `Authorization: Bearer` para
 acessar, por exemplo, `GET /api/cursos`.
 
+## Turma
+
+`Turma` pertence a um `Curso` (`@ManyToOne` obrigatorio) e representa uma
+turma concreta (ex: "Campus 85 - Turma 13"). Segue a mesma estrutura de
+pacotes de `Curso` (`br.com.familychurch.p3.turma` com subpacotes
+`.controller`, `.service`, `.repository`, `.dto`, `.exception`).
+
+### Link unico de cadastro
+
+Toda `Turma` recebe, na criacao, um `tokenCadastro` unico usado para montar o
+link publico que a lideranca compartilha com os alunos (ex:
+`app.com/cadastro/<token>`, que sera consumido pelo futuro endpoint de
+cadastro publico de `Aluno`).
+
+O token e uma string curta de 8 caracteres alfanumericos (alfabeto reduzido,
+sem caracteres ambiguos como `0`/`O` e `1`/`I`/`L`), gerada com
+`SecureRandom` em `TurmaServiceImpl`, com nova tentativa em caso de colisao
+(`TurmaRepository.existsByTokenCadastro`). Um UUID completo (como usado para
+o `id` das entidades) foi descartado para esse campo especificamente: o token
+e digitado/lido por humanos e compartilhado via WhatsApp, entao um valor
+longo prejudicaria a usabilidade do link sem trazer beneficio de seguranca
+proporcional (o token nao e segredo criptografico, apenas precisa ser dificil
+de adivinhar e unico).
+
+`TurmaResponse` expõe tanto o `tokenCadastro` isolado quanto o `linkCadastro`
+ja montado (token + base URL configurada em `app.cadastro.base-url`, sobre
+escrevivel por `CADASTRO_BASE_URL`), para o front-end escolher o formato mais
+conveniente sem precisar remontar a URL.
+
+### Modulo atual
+
+`moduloAtual` e um campo `String` livre, e nao um enum. A especificacao cita
+os modulos "Provisao/Protecao/Plataforma" da Escola de Hombridade, mas esses
+nomes sao especificos desse curso — outros cursos que a instituicao venha a
+cadastrar no futuro (a entidade `Curso` existe justamente para permitir
+reuso da mesma base por outros programas) teriam modulos com nomes
+diferentes. Fixar um enum aqui seria modelar a excecao de hoje como se fosse
+regra geral do dominio.
+
+### Reuso de excecao entre `curso` e `turma`
+
+A criacao de uma `Turma` valida que o `Curso` informado existe e esta ativo.
+Para "curso nao existe", `TurmaServiceImpl` reaproveita
+`br.com.familychurch.p3.curso.exception.CursoNaoEncontradoException` (ja
+publica) em vez de duplicar uma excecao equivalente em `turma.exception`:
+`Turma` ja depende de `Curso` na propria entidade (`@ManyToOne`) e no
+`CursoRepository`, entao depender tambem da excecao de dominio de `Curso` nao
+introduz acoplamento novo, apenas reflete uma dependencia que ja existe. Para
+"curso existe mas esta inativo" — uma regra que pertence a `Turma`, nao a
+`Curso` — foi criada `CursoInativoException` em `turma.exception`, ja que
+essa validacao nao existe do lado de `curso`.
+
+`TurmaNaoEncontradaException` (tambem em `turma.exception`) segue o mesmo
+padrao de `CursoNaoEncontradoException`: usada quando a propria `Turma`
+buscada por id nao existe.
+
 ## Migrations (Flyway)
 
 Migrations ficam em `src/main/resources/db/migration`, seguindo a convencao
@@ -174,7 +230,9 @@ Migrations ficam em `src/main/resources/db/migration`, seguindo a convencao
 o Flyway esta corretamente configurado; as migrations de dominio sao
 adicionadas nas proximas tarefas, uma por entidade/feature (`V2__create_curso_table.sql`
 e a primeira delas, seguida por `V3__create_usuario_admin_table.sql` e
-`V4__seed_usuario_admin.sql` para autenticacao).
+`V4__seed_usuario_admin.sql` para autenticacao, e `V5__create_turma_table.sql`
+para a tabela de `Turma`, com FK para `curso` e constraint de unicidade em
+`token_cadastro`).
 
 `spring.jpa.hibernate.ddl-auto` esta como `validate`: o schema e sempre gerenciado
 pelo Flyway, nunca gerado automaticamente pelo Hibernate.

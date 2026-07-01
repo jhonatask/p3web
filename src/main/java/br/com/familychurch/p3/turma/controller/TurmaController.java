@@ -1,0 +1,78 @@
+package br.com.familychurch.p3.turma.controller;
+
+import br.com.familychurch.p3.curso.exception.CursoNaoEncontradoException;
+import br.com.familychurch.p3.turma.StatusTurma;
+import br.com.familychurch.p3.turma.dto.TurmaRequest;
+import br.com.familychurch.p3.turma.dto.TurmaResponse;
+import br.com.familychurch.p3.turma.exception.CursoInativoException;
+import br.com.familychurch.p3.turma.exception.TurmaNaoEncontradaException;
+import br.com.familychurch.p3.turma.service.TurmaService;
+import jakarta.validation.Valid;
+import java.net.URI;
+import java.util.List;
+import java.util.UUID;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+@RestController
+@RequestMapping("/api/turmas")
+public class TurmaController {
+
+	private final TurmaService turmaService;
+
+	public TurmaController(TurmaService turmaService) {
+		this.turmaService = turmaService;
+	}
+
+	@PostMapping
+	public ResponseEntity<TurmaResponse> criar(@Valid @RequestBody TurmaRequest request) {
+		TurmaResponse response = turmaService.criar(request);
+		URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+				.path("/{id}")
+				.buildAndExpand(response.id())
+				.toUri();
+		return ResponseEntity.created(location).body(response);
+	}
+
+	@GetMapping
+	public List<TurmaResponse> listar(
+			@RequestParam(required = false) UUID cursoId,
+			@RequestParam(required = false) StatusTurma status) {
+		return turmaService.listar(cursoId, status);
+	}
+
+	@GetMapping("/{id}")
+	public TurmaResponse buscarPorId(@PathVariable UUID id) {
+		return turmaService.buscarPorId(id);
+	}
+
+	@PatchMapping("/{id}/encerrar")
+	public TurmaResponse encerrar(@PathVariable UUID id) {
+		return turmaService.encerrar(id);
+	}
+
+	@ExceptionHandler(TurmaNaoEncontradaException.class)
+	public ResponseEntity<String> tratarTurmaNaoEncontrada(TurmaNaoEncontradaException exception) {
+		return ResponseEntity.status(404).body(exception.getMessage());
+	}
+
+	@ExceptionHandler(CursoNaoEncontradoException.class)
+	public ResponseEntity<String> tratarCursoNaoEncontrado(CursoNaoEncontradoException exception) {
+		return ResponseEntity.status(404).body(exception.getMessage());
+	}
+
+	@ExceptionHandler(CursoInativoException.class)
+	public ResponseEntity<String> tratarCursoInativo(CursoInativoException exception) {
+		return ResponseEntity.status(409).body(exception.getMessage());
+	}
+
+}
