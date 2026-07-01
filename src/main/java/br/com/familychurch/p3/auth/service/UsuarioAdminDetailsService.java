@@ -1,18 +1,19 @@
-package br.com.familychurch.p3.auth;
+package br.com.familychurch.p3.auth.service;
 
+import br.com.familychurch.p3.auth.UsuarioAdminDetails;
 import br.com.familychurch.p3.usuarioadmin.UsuarioAdmin;
-import br.com.familychurch.p3.usuarioadmin.UsuarioAdminRepository;
+import br.com.familychurch.p3.usuarioadmin.repository.UsuarioAdminRepository;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 @Service
-class UsuarioAdminDetailsService implements UserDetailsService {
+public class UsuarioAdminDetailsService implements UserDetailsService {
 
 	private final UsuarioAdminRepository usuarioAdminRepository;
 
-	UsuarioAdminDetailsService(UsuarioAdminRepository usuarioAdminRepository) {
+	public UsuarioAdminDetailsService(UsuarioAdminRepository usuarioAdminRepository) {
 		this.usuarioAdminRepository = usuarioAdminRepository;
 	}
 

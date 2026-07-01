@@ -1,4 +1,4 @@
-package br.com.familychurch.p3.auth;
+package br.com.familychurch.p3.auth.exception;
 
 public class CredenciaisInvalidasException extends RuntimeException {
 

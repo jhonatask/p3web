@@ -1,5 +1,6 @@
-package br.com.familychurch.p3.curso;
+package br.com.familychurch.p3.curso.repository;
 
+import br.com.familychurch.p3.curso.Curso;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;

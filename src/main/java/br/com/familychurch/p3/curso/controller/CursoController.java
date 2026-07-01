@@ -1,5 +1,10 @@
-package br.com.familychurch.p3.curso;
+package br.com.familychurch.p3.curso.controller;
 
+import br.com.familychurch.p3.curso.dto.CursoRequest;
+import br.com.familychurch.p3.curso.dto.CursoResponse;
+import br.com.familychurch.p3.curso.exception.CursoJaExisteException;
+import br.com.familychurch.p3.curso.exception.CursoNaoEncontradoException;
+import br.com.familychurch.p3.curso.service.CursoService;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
@@ -19,11 +24,11 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @RestController
 @RequestMapping("/api/cursos")
-class CursoController {
+public class CursoController {
 
 	private final CursoService cursoService;
 
-	CursoController(CursoService cursoService) {
+	public CursoController(CursoService cursoService) {
 		this.cursoService = cursoService;
 	}
 

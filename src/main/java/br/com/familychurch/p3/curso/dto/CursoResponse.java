@@ -1,5 +1,6 @@
-package br.com.familychurch.p3.curso;
+package br.com.familychurch.p3.curso.dto;
 
+import br.com.familychurch.p3.curso.Curso;
 import java.util.UUID;
 
 public record CursoResponse(
@@ -11,7 +12,7 @@ public record CursoResponse(
 
 ) {
 
-	static CursoResponse from(Curso curso) {
+	public static CursoResponse from(Curso curso) {
 		return new CursoResponse(curso.getId(), curso.getNome(), curso.getDescricao(), curso.isAtivo());
 	}
 

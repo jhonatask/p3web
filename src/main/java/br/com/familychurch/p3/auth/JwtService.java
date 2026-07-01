@@ -1,6 +1,5 @@
 package br.com.familychurch.p3.auth;
 
-import br.com.familychurch.p3.usuarioadmin.UsuarioAdmin;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
@@ -24,14 +23,14 @@ public class JwtService {
 		this.chaveAssinatura = Keys.hmacShaKeyFor(jwtProperties.secret().getBytes(StandardCharsets.UTF_8));
 	}
 
-	public String gerarToken(UsuarioAdmin usuarioAdmin) {
+	public String gerarToken(String subject, String papel, String nome) {
 		Instant agora = Instant.now();
 		Instant expiracao = agora.plusSeconds(jwtProperties.expiracaoMinutos() * 60);
 
 		return Jwts.builder()
-				.subject(usuarioAdmin.getEmail())
-				.claim("papel", usuarioAdmin.getPapel().name())
-				.claim("nome", usuarioAdmin.getNome())
+				.subject(subject)
+				.claim("papel", papel)
+				.claim("nome", nome)
 				.issuedAt(Date.from(agora))
 				.expiration(Date.from(expiracao))
 				.signWith(chaveAssinatura)

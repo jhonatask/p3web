@@ -1,4 +1,4 @@
-package br.com.familychurch.p3.curso;
+package br.com.familychurch.p3.curso.dto;
 
 import jakarta.validation.constraints.NotBlank;
 

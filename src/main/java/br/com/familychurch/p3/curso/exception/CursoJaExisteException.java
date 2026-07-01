@@ -1,4 +1,4 @@
-package br.com.familychurch.p3.curso;
+package br.com.familychurch.p3.curso.exception;
 
 public class CursoJaExisteException extends RuntimeException {
 

@@ -1,5 +1,11 @@
-package br.com.familychurch.p3.curso;
+package br.com.familychurch.p3.curso.service;
 
+import br.com.familychurch.p3.curso.Curso;
+import br.com.familychurch.p3.curso.dto.CursoRequest;
+import br.com.familychurch.p3.curso.dto.CursoResponse;
+import br.com.familychurch.p3.curso.exception.CursoJaExisteException;
+import br.com.familychurch.p3.curso.exception.CursoNaoEncontradoException;
+import br.com.familychurch.p3.curso.repository.CursoRepository;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -7,11 +13,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
-class CursoServiceImpl implements CursoService {
+public class CursoServiceImpl implements CursoService {
 
 	private final CursoRepository cursoRepository;
 
-	CursoServiceImpl(CursoRepository cursoRepository) {
+	public CursoServiceImpl(CursoRepository cursoRepository) {
 		this.cursoRepository = cursoRepository;
 	}
 

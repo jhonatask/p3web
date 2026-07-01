@@ -1,5 +1,9 @@
-package br.com.familychurch.p3.auth;
+package br.com.familychurch.p3.auth.controller;
 
+import br.com.familychurch.p3.auth.dto.LoginRequest;
+import br.com.familychurch.p3.auth.dto.LoginResponse;
+import br.com.familychurch.p3.auth.exception.CredenciaisInvalidasException;
+import br.com.familychurch.p3.auth.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -10,11 +14,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/auth")
-class AuthController {
+public class AuthController {
 
 	private final AuthService authService;
 
-	AuthController(AuthService authService) {
+	public AuthController(AuthService authService) {
 		this.authService = authService;
 	}
 

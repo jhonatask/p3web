@@ -1,5 +1,7 @@
-package br.com.familychurch.p3.curso;
+package br.com.familychurch.p3.curso.service;
 
+import br.com.familychurch.p3.curso.dto.CursoRequest;
+import br.com.familychurch.p3.curso.dto.CursoResponse;
 import java.util.List;
 import java.util.UUID;
 

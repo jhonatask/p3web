@@ -31,18 +31,54 @@ para ambiente local.
 
 Pacote raiz: `br.com.familychurch.p3`.
 
-A partir da infraestrutura configurada nesta tarefa, o projeto segue
-**package by feature**: cada entidade/feature de dominio (Curso, Turma, Aluno,
-Usuario_Admin, Aula, Presenca, Avaliacao, Interesse) tera seu proprio
-subpacote com `controller`, `service`, `repository` e `dto` quando as tarefas
-seguintes os criarem, por exemplo `br.com.familychurch.p3.turma`.
+O projeto segue **package by feature, com subpacotes por camada dentro de
+cada feature**. Para cada entidade/feature de dominio (Curso, Turma, Aluno,
+Usuario_Admin, Aula, Presenca, Avaliacao, Interesse), o pacote raiz da feature
+contem a entidade JPA (e enums fortemente acoplados a ela) direto na raiz, e
+subpacotes `.controller`, `.service`, `.repository`, `.dto` e `.exception`
+para as respectivas camadas, por exemplo:
 
-O pacote `br.com.familychurch.p3.usuarioadmin` contem a entidade `UsuarioAdmin`,
-o enum `Papel` e o `UsuarioAdminRepository`, seguindo a mesma convencao de
-`Curso`. O pacote `br.com.familychurch.p3.auth` contem a infraestrutura de
-autenticacao/JWT que consome essa entidade (service de login, `JwtService`,
-filtro, `UserDetailsService`) — nao e uma entidade de dominio, e sim um
-conjunto coeso de infraestrutura de seguranca, por isso fica separado.
+```
+br.com.familychurch.p3.curso.Curso
+br.com.familychurch.p3.curso.controller.CursoController
+br.com.familychurch.p3.curso.service.CursoService / CursoServiceImpl
+br.com.familychurch.p3.curso.repository.CursoRepository
+br.com.familychurch.p3.curso.dto.CursoRequest / CursoResponse
+br.com.familychurch.p3.curso.exception.CursoJaExisteException / CursoNaoEncontradoException
+```
+
+O pacote `br.com.familychurch.p3.usuarioadmin` contem **apenas** a entidade
+`UsuarioAdmin`, o enum `Papel` e o `UsuarioAdminRepository` — ainda nao tem
+controller/service/dto proprios porque a gestao de usuarios administrativos
+(criar, editar, trocar papel) e escopo de uma fase futura do roadmap ("Fase 4
+— Gerenciar acessos"); quando essa fase chegar, seguira a mesma convencao de
+subpacotes por camada.
+
+A autenticacao/JWT fica num pacote `br.com.familychurch.p3.auth` **separado**
+de `usuarioadmin`, deliberadamente: hoje o unico jeito de logar e por
+email/senha de `UsuarioAdmin`, mas o modelo de dominio tem outros tipos de
+usuario (`Aluno`, por exemplo) que podem ganhar login proprio no futuro
+(possivelmente por CPF). Mantendo `JwtService`, `JwtProperties` e
+`JwtAuthenticationFilter` genericos (nao dependem de `UsuarioAdmin`,
+`JwtService.gerarToken` recebe `subject`/`papel`/`nome` como `String`, e o
+filtro depende da interface `UserDetailsService`, nao de uma implementacao
+concreta) esse pacote fica pronto para ser reaproveitado por um novo fluxo de
+login sem precisar ser desacoplado depois. `UsuarioAdminDetails` e
+`UsuarioAdminDetailsService` sao a unica parte de `auth` que hoje conhece
+`UsuarioAdmin` especificamente (fazem a ponte entre a entidade e o Spring
+Security) e ficariam ao lado de um eventual equivalente para `Aluno` no
+futuro:
+
+```
+br.com.familychurch.p3.auth.JwtProperties
+br.com.familychurch.p3.auth.JwtService
+br.com.familychurch.p3.auth.JwtAuthenticationFilter
+br.com.familychurch.p3.auth.UsuarioAdminDetails
+br.com.familychurch.p3.auth.controller.AuthController
+br.com.familychurch.p3.auth.service.AuthService / AuthServiceImpl / UsuarioAdminDetailsService
+br.com.familychurch.p3.auth.dto.LoginRequest / LoginResponse
+br.com.familychurch.p3.auth.exception.CredenciaisInvalidasException
+```
 
 Pacotes transversais:
 

@@ -1,5 +1,6 @@
-package br.com.familychurch.p3.usuarioadmin;
+package br.com.familychurch.p3.usuarioadmin.repository;
 
+import br.com.familychurch.p3.usuarioadmin.UsuarioAdmin;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
