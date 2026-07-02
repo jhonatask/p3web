@@ -1,7 +1,7 @@
 {
 	"info": {
 		"name": "Chamada Backend - Escola de Hombridade",
-		"description": "Colecao dos endpoints do backend do app de controle de presenca. Rode as pastas em ordem (Auth -> Curso -> Turma -> Aluno -> Aula -> Presenca) para encadear as variaveis automaticamente (token, cursoId, turmaId, tokenCadastroTurma, aulaId, qrToken).",
+		"description": "Colecao dos endpoints do backend do app de controle de presenca. Rode as pastas em ordem (Auth -> Curso -> Turma -> Aluno -> Aula -> Presenca -> Avaliacao -> Interesse -> Dashboard) para encadear as variaveis automaticamente (token, cursoId, turmaId, tokenCadastroTurma, aulaId, qrToken). Avaliacao/Interesse exigem que o Check-in por QR Code (pasta Presenca) tenha sido feito antes, com o mesmo CPF.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
@@ -306,6 +306,73 @@
 						"header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
 						"url": { "raw": "{{baseUrl}}/api/aulas/{{aulaId}}/presencas", "host": [ "{{baseUrl}}" ], "path": [ "api", "aulas", "{{aulaId}}", "presencas" ] },
 						"description": "Lista o estado atual da presenca da aula. A mesma informacao e publicada em tempo real via WebSocket STOMP no topico /topic/aulas/{aulaId}/presencas (endpoint SockJS em /ws)."
+					}
+				}
+			]
+		},
+		{
+			"name": "Avaliacao",
+			"item": [
+				{
+					"name": "Registrar Avaliacao",
+					"request": {
+						"method": "POST",
+						"header": [ { "key": "Content-Type", "value": "application/json" } ],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"cpf\": \"529.982.247-25\",\n  \"nota\": 9,\n  \"didatica\": \"OTIMA\",\n  \"sugestao\": \"Otima aula, professor bem dinamico\",\n  \"nps\": 10\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/api/publico/aulas/{{aulaId}}/avaliacoes", "host": [ "{{baseUrl}}" ], "path": [ "api", "publico", "aulas", "{{aulaId}}", "avaliacoes" ] },
+						"description": "Rota publica, sem Authorization. So aceita a avaliacao se o aluno (pelo CPF) ja tiver feito check-in nessa aula (pasta Presenca > Check-in por QR Code); didatica aceita OTIMA, BOA, REGULAR ou RUIM; nota/nps vao de 0 a 10."
+					}
+				},
+				{
+					"name": "Listar Avaliacoes da Aula",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+						"url": { "raw": "{{baseUrl}}/api/aulas/{{aulaId}}/avaliacoes", "host": [ "{{baseUrl}}" ], "path": [ "api", "aulas", "{{aulaId}}", "avaliacoes" ] }
+					}
+				}
+			]
+		},
+		{
+			"name": "Interesse",
+			"item": [
+				{
+					"name": "Registrar Interesse",
+					"request": {
+						"method": "POST",
+						"header": [ { "key": "Content-Type", "value": "application/json" } ],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"cpf\": \"529.982.247-25\",\n  \"gcHomens\": true,\n  \"proximoAwake\": false,\n  \"discipulado\": true\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/api/publico/aulas/{{aulaId}}/interesses", "host": [ "{{baseUrl}}" ], "path": [ "api", "publico", "aulas", "{{aulaId}}", "interesses" ] },
+						"description": "Rota publica, sem Authorization. So aceita o registro se o aluno (pelo CPF) ja tiver feito check-in nessa aula (pasta Presenca > Check-in por QR Code)."
+					}
+				},
+				{
+					"name": "Listar Interesses da Turma",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+						"url": { "raw": "{{baseUrl}}/api/turmas/{{turmaId}}/interesses", "host": [ "{{baseUrl}}" ], "path": [ "api", "turmas", "{{turmaId}}", "interesses" ] },
+						"description": "Lista os interesses (GC de homens, proximo Awake, discipulado) de todas as aulas da turma, para a tela de gestao de interesse do admin."
+					}
+				}
+			]
+		},
+		{
+			"name": "Dashboard",
+			"item": [
+				{
+					"name": "Dashboard da Turma",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+						"url": { "raw": "{{baseUrl}}/api/turmas/{{turmaId}}/dashboard", "host": [ "{{baseUrl}}" ], "path": [ "api", "turmas", "{{turmaId}}", "dashboard" ] },
+						"description": "Visao agregada da turma: frequencia media, nota media e NPS medio, alem do detalhamento por aula (porAula)."
 					}
 				}
 			]

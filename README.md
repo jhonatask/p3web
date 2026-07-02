@@ -31,9 +31,10 @@ para ambiente local.
 ## Collection de requisicoes (Postman)
 
 `postman/chamada-backend.postman_collection.json` tem todos os endpoints
-prontos, organizados em pastas (Auth, Curso, Turma, Aluno, Aula, Presenca).
-Importe o arquivo no Postman (ou em qualquer cliente compativel com o formato
-de collection do Postman v2.1, como Insomnia ou Bruno).
+prontos, organizados em pastas (Auth, Curso, Turma, Aluno, Aula, Presenca,
+Avaliacao, Interesse, Dashboard). Importe o arquivo no Postman (ou em qualquer
+cliente compativel com o formato de collection do Postman v2.1, como Insomnia
+ou Bruno).
 
 Rode as pastas em ordem — a collection encadeia as variaveis automaticamente
 via scripts de teste:
@@ -52,6 +53,12 @@ via scripts de teste:
 6. **Presenca > Check-in por QR Code** — rota publica, usa `qrToken` e o
    mesmo CPF de teste do passo 4. **Marcar Presenca Manual** e **Listar
    Presencas da Aula** exigem `Authorization` como as demais rotas internas.
+7. **Avaliacao > Registrar Avaliacao** e **Interesse > Registrar Interesse**
+   — rotas publicas, exigem que o aluno (mesmo CPF) ja tenha feito check-in na
+   aula (passo 6) antes de avaliar ou registrar interesse. **Listar Avaliacoes
+   da Aula** e **Listar Interesses da Turma** exigem `Authorization`.
+8. **Dashboard > Dashboard da Turma** — exige `Authorization`, agrega
+   frequencia/nota/NPS medios da turma e por aula.
 
 `baseUrl` aponta para `http://localhost:8080` por padrao (ajustavel na
 variavel de collection).
@@ -515,6 +522,85 @@ de quem consegue ver o QR code projetado em sala).
 unico). `V8__create_presenca_table.sql` cria `presenca` (FK para `aluno`,
 `aula` e `usuario_admin` via `validado_por`, nullable; `uk_presenca_aluno_aula`
 garante um check-in por aluno por aula).
+
+## Avaliacao e Interesse (pos check-in)
+
+`Avaliacao` (`br.com.familychurch.p3.avaliacao`) e `Interesse`
+(`br.com.familychurch.p3.interesse`) sao features irmas, mas com pacotes
+proprios (entidade, `.controller`, `.service`, `.repository`, `.dto`,
+`.exception` cada uma), seguindo a mesma convencao das demais features — nao
+foi criado um pacote generico compartilhado entre as duas, mesmo com a regra
+de negocio de pre-requisito (check-in) sendo identica nas duas, com excecoes
+de dominio proprias e duplicadas em cada pacote (`CheckinNaoRealizadoException`
+em `avaliacao.exception` e outra em `interesse.exception`), no mesmo espirito
+de `presenca.exception`/`aula.exception` nao compartilharem excecoes entre si.
+
+```
+POST /api/publico/aulas/{aulaId}/avaliacoes   (publico)
+GET  /api/aulas/{aulaId}/avaliacoes           (exige JWT)
+
+POST /api/publico/aulas/{aulaId}/interesses   (publico)
+GET  /api/turmas/{turmaId}/interesses         (exige JWT)
+```
+
+Ambos os endpoints publicos identificam o aluno pelo `cpf` (mesmo padrao de
+`PresencaServiceImpl.buscarAlunoDaTurma`, reimplementado localmente em cada
+servico) e validam, nesta ordem: (1) a `Aula` existe; (2) o aluno pertence a
+turma da aula; (3) o aluno ja tem uma `Presenca` registrada para essa aula
+(`PresencaRepository.existsByAlunoIdAndAulaId`), 404
+(`CheckinNaoRealizadoException`) caso contrario — a tela de avaliacao/interesse
+so aparece para quem ja fez check-in; (4) o aluno ainda nao avaliou/registrou
+interesse nessa aula, 409 (`AvaliacaoDuplicadaException`/
+`InteresseDuplicadoException`) caso contrario, com constraint unica
+`(aluno_id, aula_id)` no banco reforcando a regra.
+
+`Avaliacao.nota` e `Avaliacao.nps` sao validados tanto via Bean Validation
+(`@Min(0) @Max(10)` no `AvaliacaoRequest`) quanto via `check` constraint na
+migration, para o banco nunca aceitar um valor invalido mesmo se outra rota de
+escrita for adicionada no futuro. `Avaliacao.didatica` e o enum
+`DidaticaAvaliacao` (`OTIMA`, `BOA`, `REGULAR`, `RUIM`). `Interesse` tem tres
+flags booleanas (`gcHomens`, `proximoAwake`, `discipulado`), sem validacao
+adicional alem de exigirem um valor (mesmo que `false`).
+
+A listagem de interesses e por **turma**, nao por aula (`GET
+/api/turmas/{turmaId}/interesses`, via `InteresseRepository.findByAulaTurmaId`,
+que o Spring Data deriva automaticamente pela associacao `interesse.aula.turma`),
+porque a tela de "gestao de interesse" do admin precisa ver quem demonstrou
+interesse em GC/Awake/Discipulado ao longo de toda a turma, nao aula a aula —
+diferente da listagem de avaliacoes, que e por aula (uso do professor
+avaliando uma aula especifica logo apos ela acontecer).
+
+### Migrations (Avaliacao/Interesse)
+
+`V9__create_avaliacao_table.sql` cria `avaliacao` (FK para `aluno` e `aula`,
+`uk_avaliacao_aluno_aula` unico, `check` constraints em `nota` e `nps`).
+`V10__create_interesse_table.sql` cria `interesse` (FK para `aluno` e `aula`,
+`uk_interesse_aluno_aula` unico, tres colunas boolean com `default false`).
+
+## Dashboard da turma
+
+`GET /api/turmas/{turmaId}/dashboard` (exige JWT) fica dentro da propria
+feature `turma` (`TurmaController`/`TurmaServiceImpl`) em vez de um pacote
+novo, por ser uma visao agregada sobre dados que ja pertencem a `Turma` — sem
+entidade ou tabela propria. `TurmaServiceImpl` passou a injetar tambem
+`AulaRepository`, `PresencaRepository`, `AlunoRepository` e
+`AvaliacaoRepository` so para esse calculo.
+
+`TurmaDashboardResponse` traz `totalAlunos` (matriculados na turma agora,
+`AlunoRepository.countByTurmaId`), a lista `porAula` (uma `AulaDashboardItem`
+por `Aula` da turma, ordenada por `numero`, com `totalPresencas`
+(`PresencaRepository.countByAulaId`), `percentualPresenca` (`totalPresencas /
+totalAlunos * 100`, `0` se a turma nao tiver alunos ainda) e `notaMedia`/
+`npsMedia` daquela aula especifica, calculadas com `avg()` via `@Query` em
+`AvaliacaoRepository` — `null` enquanto nenhuma avaliacao daquela aula existir,
+para o front-end distinguir "sem dado" de "nota zero"), e os agregados da
+turma inteira: `frequenciaMedia` (media aritmetica simples do
+`percentualPresenca` de cada aula, `0` se a turma nao tem aulas ainda) e
+`notaMedia`/`npsMedia` da turma (media das medias por aula que nao sao nulas,
+tambem `null` se nenhuma aula tem avaliacao ainda). E um calculo deliberamente
+simples (media de medias, nao ponderada por numero de avaliacoes por aula),
+suficiente para o MVP do dashboard basico do roadmap; um calculo estatistico
+mais rigoroso fica para uma fase futura caso vire requisito.
 
 ## Escolha de chave primaria
 
