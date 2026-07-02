@@ -1,10 +1,17 @@
 package br.com.familychurch.p3.turma.service;
 
+import br.com.familychurch.p3.aluno.repository.AlunoRepository;
+import br.com.familychurch.p3.aula.Aula;
+import br.com.familychurch.p3.aula.repository.AulaRepository;
+import br.com.familychurch.p3.avaliacao.repository.AvaliacaoRepository;
 import br.com.familychurch.p3.curso.Curso;
 import br.com.familychurch.p3.curso.exception.CursoNaoEncontradoException;
 import br.com.familychurch.p3.curso.repository.CursoRepository;
+import br.com.familychurch.p3.presenca.repository.PresencaRepository;
 import br.com.familychurch.p3.turma.StatusTurma;
 import br.com.familychurch.p3.turma.Turma;
+import br.com.familychurch.p3.turma.dto.AulaDashboardItem;
+import br.com.familychurch.p3.turma.dto.TurmaDashboardResponse;
 import br.com.familychurch.p3.turma.dto.TurmaPublicaResponse;
 import br.com.familychurch.p3.turma.dto.TurmaRequest;
 import br.com.familychurch.p3.turma.dto.TurmaResponse;
@@ -14,7 +21,9 @@ import br.com.familychurch.p3.turma.exception.TurmaNaoEncontradaException;
 import br.com.familychurch.p3.turma.repository.TurmaRepository;
 import java.security.SecureRandom;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,13 +38,22 @@ public class TurmaServiceImpl implements TurmaService {
 
 	private final TurmaRepository turmaRepository;
 	private final CursoRepository cursoRepository;
+	private final AulaRepository aulaRepository;
+	private final PresencaRepository presencaRepository;
+	private final AlunoRepository alunoRepository;
+	private final AvaliacaoRepository avaliacaoRepository;
 	private final String baseUrlCadastro;
 	private final SecureRandom secureRandom = new SecureRandom();
 
 	public TurmaServiceImpl(TurmaRepository turmaRepository, CursoRepository cursoRepository,
-			@Value("${app.cadastro.base-url}") String baseUrlCadastro) {
+			AulaRepository aulaRepository, PresencaRepository presencaRepository, AlunoRepository alunoRepository,
+			AvaliacaoRepository avaliacaoRepository, @Value("${app.cadastro.base-url}") String baseUrlCadastro) {
 		this.turmaRepository = turmaRepository;
 		this.cursoRepository = cursoRepository;
+		this.aulaRepository = aulaRepository;
+		this.presencaRepository = presencaRepository;
+		this.alunoRepository = alunoRepository;
+		this.avaliacaoRepository = avaliacaoRepository;
 		this.baseUrlCadastro = baseUrlCadastro;
 	}
 
@@ -91,6 +109,51 @@ public class TurmaServiceImpl implements TurmaService {
 			throw new TurmaEncerradaException(token);
 		}
 		return TurmaPublicaResponse.from(turma);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public TurmaDashboardResponse obterDashboard(UUID turmaId) {
+		Turma turma = buscarEntidadePorId(turmaId);
+		long totalAlunos = alunoRepository.countByTurmaId(turmaId);
+		List<Aula> aulas = aulaRepository.findByTurmaIdOrderByNumeroAsc(turmaId);
+
+		List<AulaDashboardItem> porAula = aulas.stream()
+				.map(aula -> montarItemDashboard(aula, totalAlunos))
+				.toList();
+
+		double frequenciaMedia = porAula.isEmpty() ? 0
+				: porAula.stream().mapToDouble(AulaDashboardItem::percentualPresenca).average().orElse(0);
+		Double notaMedia = mediaDasMedias(porAula.stream().map(AulaDashboardItem::notaMedia));
+		Double npsMedia = mediaDasMedias(porAula.stream().map(AulaDashboardItem::npsMedia));
+
+		return new TurmaDashboardResponse(
+				turma.getId(),
+				turma.getNome(),
+				aulas.size(),
+				(int) totalAlunos,
+				frequenciaMedia,
+				notaMedia,
+				npsMedia,
+				porAula);
+	}
+
+	private AulaDashboardItem montarItemDashboard(Aula aula, long totalAlunos) {
+		long totalPresencas = presencaRepository.countByAulaId(aula.getId());
+		double percentualPresenca = totalAlunos == 0 ? 0 : (totalPresencas * 100.0 / totalAlunos);
+		Double notaMedia = avaliacaoRepository.mediaNotaPorAula(aula.getId());
+		Double npsMedia = avaliacaoRepository.mediaNpsPorAula(aula.getId());
+		return new AulaDashboardItem(
+				aula.getId(), aula.getNumero(), aula.getData(), totalPresencas, percentualPresenca, notaMedia,
+				npsMedia);
+	}
+
+	private Double mediaDasMedias(Stream<Double> medias) {
+		List<Double> validas = medias.filter(Objects::nonNull).toList();
+		if (validas.isEmpty()) {
+			return null;
+		}
+		return validas.stream().mapToDouble(Double::doubleValue).average().orElse(0);
 	}
 
 	private Curso buscarCursoAtivo(UUID cursoId) {

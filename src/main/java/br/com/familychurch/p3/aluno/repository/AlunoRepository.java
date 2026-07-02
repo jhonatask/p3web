@@ -14,4 +14,6 @@ public interface AlunoRepository extends JpaRepository<Aluno, UUID> {
 
 	List<Aluno> findByTurmaId(UUID turmaId);
 
+	long countByTurmaId(UUID turmaId);
+
 }

@@ -11,4 +11,6 @@ public interface PresencaRepository extends JpaRepository<Presenca, UUID> {
 
 	List<Presenca> findByAulaIdOrderByTimestampCheckinAsc(UUID aulaId);
 
+	long countByAulaId(UUID aulaId);
+
 }

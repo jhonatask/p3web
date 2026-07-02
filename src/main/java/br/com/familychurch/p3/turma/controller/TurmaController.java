@@ -1,6 +1,7 @@
 package br.com.familychurch.p3.turma.controller;
 
 import br.com.familychurch.p3.turma.StatusTurma;
+import br.com.familychurch.p3.turma.dto.TurmaDashboardResponse;
 import br.com.familychurch.p3.turma.dto.TurmaPublicaResponse;
 import br.com.familychurch.p3.turma.dto.TurmaRequest;
 import br.com.familychurch.p3.turma.dto.TurmaResponse;
@@ -58,6 +59,11 @@ public class TurmaController {
 	@GetMapping("/api/publico/turmas/{token}")
 	public TurmaPublicaResponse buscarPorTokenCadastro(@PathVariable String token) {
 		return turmaService.buscarPorTokenCadastro(token);
+	}
+
+	@GetMapping("/api/turmas/{turmaId}/dashboard")
+	public TurmaDashboardResponse obterDashboard(@PathVariable UUID turmaId) {
+		return turmaService.obterDashboard(turmaId);
 	}
 
 }

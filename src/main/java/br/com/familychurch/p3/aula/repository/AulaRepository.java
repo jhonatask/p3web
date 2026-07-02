@@ -14,4 +14,6 @@ public interface AulaRepository extends JpaRepository<Aula, UUID> {
 
 	List<Aula> findByTurmaId(UUID turmaId);
 
+	List<Aula> findByTurmaIdOrderByNumeroAsc(UUID turmaId);
+
 }
