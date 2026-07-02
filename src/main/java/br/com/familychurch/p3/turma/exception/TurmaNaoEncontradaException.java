@@ -9,4 +9,8 @@ public class TurmaNaoEncontradaException extends NotFoundException {
 		super("Turma nao encontrada para o id '%s'".formatted(id));
 	}
 
+	public TurmaNaoEncontradaException(String tokenCadastro) {
+		super("Turma nao encontrada para o token de cadastro '%s'".formatted(tokenCadastro));
+	}
+
 }

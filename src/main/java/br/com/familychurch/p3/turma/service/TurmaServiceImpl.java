@@ -5,9 +5,11 @@ import br.com.familychurch.p3.curso.exception.CursoNaoEncontradoException;
 import br.com.familychurch.p3.curso.repository.CursoRepository;
 import br.com.familychurch.p3.turma.StatusTurma;
 import br.com.familychurch.p3.turma.Turma;
+import br.com.familychurch.p3.turma.dto.TurmaPublicaResponse;
 import br.com.familychurch.p3.turma.dto.TurmaRequest;
 import br.com.familychurch.p3.turma.dto.TurmaResponse;
 import br.com.familychurch.p3.turma.exception.CursoInativoException;
+import br.com.familychurch.p3.turma.exception.TurmaEncerradaException;
 import br.com.familychurch.p3.turma.exception.TurmaNaoEncontradaException;
 import br.com.familychurch.p3.turma.repository.TurmaRepository;
 import java.security.SecureRandom;
@@ -78,6 +80,17 @@ public class TurmaServiceImpl implements TurmaService {
 		Turma turma = buscarEntidadePorId(id);
 		turma.setStatus(StatusTurma.ENCERRADA);
 		return toResponse(turma);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public TurmaPublicaResponse buscarPorTokenCadastro(String token) {
+		Turma turma = turmaRepository.findByTokenCadastro(token)
+				.orElseThrow(() -> new TurmaNaoEncontradaException(token));
+		if (turma.getStatus() == StatusTurma.ENCERRADA) {
+			throw new TurmaEncerradaException(token);
+		}
+		return TurmaPublicaResponse.from(turma);
 	}
 
 	private Curso buscarCursoAtivo(UUID cursoId) {

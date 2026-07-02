@@ -17,3 +17,5 @@ app:
     expiracao-minutos: ${JWT_EXPIRACAO_MINUTOS:60}
   cadastro:
     base-url: ${CADASTRO_BASE_URL:https://app.com/cadastro}
+  cors:
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:3000}

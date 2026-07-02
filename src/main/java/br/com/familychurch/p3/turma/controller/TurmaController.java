@@ -1,6 +1,7 @@
 package br.com.familychurch.p3.turma.controller;
 
 import br.com.familychurch.p3.turma.StatusTurma;
+import br.com.familychurch.p3.turma.dto.TurmaPublicaResponse;
 import br.com.familychurch.p3.turma.dto.TurmaRequest;
 import br.com.familychurch.p3.turma.dto.TurmaResponse;
 import br.com.familychurch.p3.turma.service.TurmaService;
@@ -14,13 +15,11 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @RestController
-@RequestMapping("/api/turmas")
 public class TurmaController {
 
 	private final TurmaService turmaService;
@@ -29,7 +28,7 @@ public class TurmaController {
 		this.turmaService = turmaService;
 	}
 
-	@PostMapping
+	@PostMapping("/api/turmas")
 	public ResponseEntity<TurmaResponse> criar(@Valid @RequestBody TurmaRequest request) {
 		TurmaResponse response = turmaService.criar(request);
 		URI location = ServletUriComponentsBuilder.fromCurrentRequest()
@@ -39,21 +38,26 @@ public class TurmaController {
 		return ResponseEntity.created(location).body(response);
 	}
 
-	@GetMapping
+	@GetMapping("/api/turmas")
 	public List<TurmaResponse> listar(
 			@RequestParam(required = false) UUID cursoId,
 			@RequestParam(required = false) StatusTurma status) {
 		return turmaService.listar(cursoId, status);
 	}
 
-	@GetMapping("/{id}")
+	@GetMapping("/api/turmas/{id}")
 	public TurmaResponse buscarPorId(@PathVariable UUID id) {
 		return turmaService.buscarPorId(id);
 	}
 
-	@PatchMapping("/{id}/encerrar")
+	@PatchMapping("/api/turmas/{id}/encerrar")
 	public TurmaResponse encerrar(@PathVariable UUID id) {
 		return turmaService.encerrar(id);
+	}
+
+	@GetMapping("/api/publico/turmas/{token}")
+	public TurmaPublicaResponse buscarPorTokenCadastro(@PathVariable String token) {
+		return turmaService.buscarPorTokenCadastro(token);
 	}
 
 }
