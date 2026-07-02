@@ -1,0 +1,211 @@
+{
+	"info": {
+		"name": "Chamada Backend - Escola de Hombridade",
+		"description": "Colecao dos endpoints do backend do app de controle de presenca. Rode as pastas em ordem (Auth -> Curso -> Turma -> Aluno) para encadear as variaveis automaticamente (token, cursoId, turmaId, tokenCadastroTurma).",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{ "key": "baseUrl", "value": "http://localhost:8080" },
+		{ "key": "token", "value": "" },
+		{ "key": "cursoId", "value": "" },
+		{ "key": "turmaId", "value": "" },
+		{ "key": "tokenCadastroTurma", "value": "" }
+	],
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const body = pm.response.json();",
+									"pm.collectionVariables.set('token', body.token);",
+									"pm.test('login retornou token', () => pm.expect(body.token).to.be.a('string'));"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [ { "key": "Content-Type", "value": "application/json" } ],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@hombridade.local\",\n  \"senha\": \"hombridade2026\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/api/auth/login", "host": [ "{{baseUrl}}" ], "path": [ "api", "auth", "login" ] }
+					}
+				}
+			]
+		},
+		{
+			"name": "Curso",
+			"item": [
+				{
+					"name": "Criar Curso",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const body = pm.response.json();",
+									"pm.collectionVariables.set('cursoId', body.id);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nome\": \"Escola de Hombridade\",\n  \"descricao\": \"Curso de formacao para homens da igreja\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/api/cursos", "host": [ "{{baseUrl}}" ], "path": [ "api", "cursos" ] }
+					}
+				},
+				{
+					"name": "Listar Cursos",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+						"url": {
+							"raw": "{{baseUrl}}/api/cursos?ativo=true",
+							"host": [ "{{baseUrl}}" ],
+							"path": [ "api", "cursos" ],
+							"query": [ { "key": "ativo", "value": "true" } ]
+						}
+					}
+				},
+				{
+					"name": "Buscar Curso por ID",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+						"url": { "raw": "{{baseUrl}}/api/cursos/{{cursoId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "cursos", "{{cursoId}}" ] }
+					}
+				},
+				{
+					"name": "Atualizar Curso",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nome\": \"Escola de Hombridade\",\n  \"descricao\": \"Descricao atualizada\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/api/cursos/{{cursoId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "cursos", "{{cursoId}}" ] }
+					}
+				},
+				{
+					"name": "Desativar Curso",
+					"request": {
+						"method": "PATCH",
+						"header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+						"url": { "raw": "{{baseUrl}}/api/cursos/{{cursoId}}/desativar", "host": [ "{{baseUrl}}" ], "path": [ "api", "cursos", "{{cursoId}}", "desativar" ] }
+					}
+				}
+			]
+		},
+		{
+			"name": "Turma",
+			"item": [
+				{
+					"name": "Criar Turma",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const body = pm.response.json();",
+									"pm.collectionVariables.set('turmaId', body.id);",
+									"pm.collectionVariables.set('tokenCadastroTurma', body.tokenCadastro);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"cursoId\": \"{{cursoId}}\",\n  \"nome\": \"Campus 85 - Turma 13\",\n  \"moduloAtual\": \"Provisao\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/api/turmas", "host": [ "{{baseUrl}}" ], "path": [ "api", "turmas" ] }
+					}
+				},
+				{
+					"name": "Listar Turmas",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+						"url": {
+							"raw": "{{baseUrl}}/api/turmas?cursoId={{cursoId}}",
+							"host": [ "{{baseUrl}}" ],
+							"path": [ "api", "turmas" ],
+							"query": [ { "key": "cursoId", "value": "{{cursoId}}" }, { "key": "status", "value": "ATIVA", "disabled": true } ]
+						}
+					}
+				},
+				{
+					"name": "Buscar Turma por ID",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+						"url": { "raw": "{{baseUrl}}/api/turmas/{{turmaId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "turmas", "{{turmaId}}" ] }
+					}
+				},
+				{
+					"name": "Encerrar Turma",
+					"request": {
+						"method": "PATCH",
+						"header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+						"url": { "raw": "{{baseUrl}}/api/turmas/{{turmaId}}/encerrar", "host": [ "{{baseUrl}}" ], "path": [ "api", "turmas", "{{turmaId}}", "encerrar" ] }
+					}
+				}
+			]
+		},
+		{
+			"name": "Aluno",
+			"item": [
+				{
+					"name": "Cadastro Publico de Aluno",
+					"request": {
+						"method": "POST",
+						"header": [ { "key": "Content-Type", "value": "application/json" } ],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nome\": \"Joao da Silva\",\n  \"cpf\": \"529.982.247-25\",\n  \"celular\": \"11999999999\",\n  \"campus\": \"Campus 85\",\n  \"aceiteLgpd\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/publico/turmas/{{tokenCadastroTurma}}/alunos",
+							"host": [ "{{baseUrl}}" ],
+							"path": [ "api", "publico", "turmas", "{{tokenCadastroTurma}}", "alunos" ]
+						},
+						"description": "Rota publica, sem Authorization. Usa o tokenCadastro gerado pela Turma (nao o id interno). CPF de teste com digitos verificadores validos."
+					}
+				},
+				{
+					"name": "Listar Alunos da Turma",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+						"url": { "raw": "{{baseUrl}}/api/turmas/{{turmaId}}/alunos", "host": [ "{{baseUrl}}" ], "path": [ "api", "turmas", "{{turmaId}}", "alunos" ] }
+					}
+				}
+			]
+		}
+	]
+}

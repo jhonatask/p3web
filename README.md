@@ -27,6 +27,28 @@ desenvolvimento (banco `chamada`, usuario `chamada`, senha `chamada`) estao
 definidas tanto no `compose.yaml` quanto em `application.yml` — servem apenas
 para ambiente local.
 
+## Collection de requisicoes (Postman)
+
+`postman/chamada-backend.postman_collection.json` tem todos os endpoints
+prontos, organizados em pastas (Auth, Curso, Turma, Aluno). Importe o arquivo
+no Postman (ou em qualquer cliente compativel com o formato de collection do
+Postman v2.1, como Insomnia ou Bruno).
+
+Rode as pastas em ordem — a collection encadeia as variaveis automaticamente
+via scripts de teste:
+1. **Auth > Login** — usa o usuario semente (`admin@hombridade.local`) e guarda
+   o token JWT numa variavel de collection (`token`), reaproveitada em todas as
+   requisicoes protegidas seguintes.
+2. **Curso > Criar Curso** — guarda o `id` criado em `cursoId`.
+3. **Turma > Criar Turma** — usa `cursoId`, guarda `turmaId` e o
+   `tokenCadastro` gerado em `tokenCadastroTurma`.
+4. **Aluno > Cadastro Publico de Aluno** — usa `tokenCadastroTurma` (rota
+   publica, sem `Authorization`); vem com um CPF de teste com digitos
+   verificadores validos (`529.982.247-25`).
+
+`baseUrl` aponta para `http://localhost:8080` por padrao (ajustavel na
+variavel de collection).
+
 ## Convencao de pacotes
 
 Pacote raiz: `br.com.familychurch.p3`.
