@@ -9,7 +9,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import br.com.familychurch.p3.IntegrationTestSupport;
 import br.com.familychurch.p3.aluno.repository.AlunoRepository;
+import br.com.familychurch.p3.aula.repository.AulaRepository;
 import br.com.familychurch.p3.curso.repository.CursoRepository;
+import br.com.familychurch.p3.presenca.repository.PresencaRepository;
 import br.com.familychurch.p3.turma.repository.TurmaRepository;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,10 +35,18 @@ class CursoControllerIT extends IntegrationTestSupport {
 	@Autowired
 	private AlunoRepository alunoRepository;
 
+	@Autowired
+	private AulaRepository aulaRepository;
+
+	@Autowired
+	private PresencaRepository presencaRepository;
+
 	private String tokenAdmin;
 
 	@BeforeEach
 	void configurarCenario() throws Exception {
+		presencaRepository.deleteAll();
+		aulaRepository.deleteAll();
 		alunoRepository.deleteAll();
 		turmaRepository.deleteAll();
 		cursoRepository.deleteAll();

@@ -1,7 +1,7 @@
 {
 	"info": {
 		"name": "Chamada Backend - Escola de Hombridade",
-		"description": "Colecao dos endpoints do backend do app de controle de presenca. Rode as pastas em ordem (Auth -> Curso -> Turma -> Aluno) para encadear as variaveis automaticamente (token, cursoId, turmaId, tokenCadastroTurma).",
+		"description": "Colecao dos endpoints do backend do app de controle de presenca. Rode as pastas em ordem (Auth -> Curso -> Turma -> Aluno -> Aula -> Presenca) para encadear as variaveis automaticamente (token, cursoId, turmaId, tokenCadastroTurma, aulaId, qrToken).",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
@@ -9,7 +9,9 @@
 		{ "key": "token", "value": "" },
 		{ "key": "cursoId", "value": "" },
 		{ "key": "turmaId", "value": "" },
-		{ "key": "tokenCadastroTurma", "value": "" }
+		{ "key": "tokenCadastroTurma", "value": "" },
+		{ "key": "aulaId", "value": "" },
+		{ "key": "qrToken", "value": "" }
 	],
 	"item": [
 		{
@@ -203,6 +205,107 @@
 						"method": "GET",
 						"header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
 						"url": { "raw": "{{baseUrl}}/api/turmas/{{turmaId}}/alunos", "host": [ "{{baseUrl}}" ], "path": [ "api", "turmas", "{{turmaId}}", "alunos" ] }
+					}
+				}
+			]
+		},
+		{
+			"name": "Aula",
+			"item": [
+				{
+					"name": "Criar Aula",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const body = pm.response.json();",
+									"pm.collectionVariables.set('aulaId', body.id);",
+									"pm.collectionVariables.set('qrToken', body.qrToken);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"numero\": 1,\n  \"modulo\": \"Provisao\",\n  \"data\": \"2026-07-02\",\n  \"janelaAbertura\": \"2026-07-02T19:00:00\",\n  \"janelaFechamento\": \"2026-07-02T21:00:00\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/api/turmas/{{turmaId}}/aulas", "host": [ "{{baseUrl}}" ], "path": [ "api", "turmas", "{{turmaId}}", "aulas" ] },
+						"description": "janelaAbertura/janelaFechamento delimitam quando o check-in (QR code ou manual) e aceito para essa aula. Ajuste os horarios para o momento do teste antes de rodar."
+					}
+				},
+				{
+					"name": "Listar Aulas da Turma",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+						"url": { "raw": "{{baseUrl}}/api/turmas/{{turmaId}}/aulas", "host": [ "{{baseUrl}}" ], "path": [ "api", "turmas", "{{turmaId}}", "aulas" ] }
+					}
+				},
+				{
+					"name": "Buscar Aula por ID",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+						"url": { "raw": "{{baseUrl}}/api/aulas/{{aulaId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "aulas", "{{aulaId}}" ] }
+					}
+				},
+				{
+					"name": "Obter Imagem do QR Code",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+						"url": { "raw": "{{baseUrl}}/api/aulas/{{aulaId}}/qrcode", "host": [ "{{baseUrl}}" ], "path": [ "api", "aulas", "{{aulaId}}", "qrcode" ] },
+						"description": "Retorna a imagem PNG do QR code dinamico da aula (image/png), para exibir em sala. O conteudo do QR code e o qrToken usado no check-in."
+					}
+				}
+			]
+		},
+		{
+			"name": "Presenca",
+			"item": [
+				{
+					"name": "Check-in por QR Code",
+					"request": {
+						"method": "POST",
+						"header": [ { "key": "Content-Type", "value": "application/json" } ],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"qrToken\": \"{{qrToken}}\",\n  \"cpf\": \"529.982.247-25\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/api/publico/checkin", "host": [ "{{baseUrl}}" ], "path": [ "api", "publico", "checkin" ] },
+						"description": "Rota publica, sem Authorization. Identifica o aluno pelo CPF e a aula pelo qrToken exibido em sala; so aceita check-in dentro da janela de abertura/fechamento da aula."
+					}
+				},
+				{
+					"name": "Marcar Presenca Manual (fallback)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"cpf\": \"529.982.247-25\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/api/aulas/{{aulaId}}/presencas/manual", "host": [ "{{baseUrl}}" ], "path": [ "api", "aulas", "{{aulaId}}", "presencas", "manual" ] },
+						"description": "Usado pelo professor/admin para marcar presenca de quem esqueceu o celular ou nao tem o app ainda."
+					}
+				},
+				{
+					"name": "Listar Presencas da Aula",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+						"url": { "raw": "{{baseUrl}}/api/aulas/{{aulaId}}/presencas", "host": [ "{{baseUrl}}" ], "path": [ "api", "aulas", "{{aulaId}}", "presencas" ] },
+						"description": "Lista o estado atual da presenca da aula. A mesma informacao e publicada em tempo real via WebSocket STOMP no topico /topic/aulas/{aulaId}/presencas (endpoint SockJS em /ws)."
 					}
 				}
 			]

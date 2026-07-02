@@ -9,9 +9,10 @@ cobre apenas o setup e as convencoes deste repositorio backend.
 ## Stack
 
 - Java 21
-- Spring Boot 4.1.0 (Web MVC, Data JPA, Security, Validation)
+- Spring Boot 4.1.0 (Web MVC, Data JPA, Security, Validation, WebSocket/STOMP)
 - PostgreSQL 16
 - Flyway (migrations de schema)
+- ZXing (`core`) para geracao da imagem do QR code dinamico das aulas
 
 ## Como rodar localmente
 
@@ -30,9 +31,9 @@ para ambiente local.
 ## Collection de requisicoes (Postman)
 
 `postman/chamada-backend.postman_collection.json` tem todos os endpoints
-prontos, organizados em pastas (Auth, Curso, Turma, Aluno). Importe o arquivo
-no Postman (ou em qualquer cliente compativel com o formato de collection do
-Postman v2.1, como Insomnia ou Bruno).
+prontos, organizados em pastas (Auth, Curso, Turma, Aluno, Aula, Presenca).
+Importe o arquivo no Postman (ou em qualquer cliente compativel com o formato
+de collection do Postman v2.1, como Insomnia ou Bruno).
 
 Rode as pastas em ordem — a collection encadeia as variaveis automaticamente
 via scripts de teste:
@@ -45,6 +46,12 @@ via scripts de teste:
 4. **Aluno > Cadastro Publico de Aluno** — usa `tokenCadastroTurma` (rota
    publica, sem `Authorization`); vem com um CPF de teste com digitos
    verificadores validos (`529.982.247-25`).
+5. **Aula > Criar Aula** — usa `turmaId`, guarda `aulaId` e o `qrToken`
+   gerado. Ajuste `janelaAbertura`/`janelaFechamento` no corpo da requisicao
+   para o horario do teste antes de rodar.
+6. **Presenca > Check-in por QR Code** — rota publica, usa `qrToken` e o
+   mesmo CPF de teste do passo 4. **Marcar Presenca Manual** e **Listar
+   Presencas da Aula** exigem `Authorization` como as demais rotas internas.
 
 `baseUrl` aponta para `http://localhost:8080` por padrao (ajustavel na
 variavel de collection).
@@ -405,6 +412,109 @@ FK para `turma` e constraint de unicidade global em `cpf`).
 
 `spring.jpa.hibernate.ddl-auto` esta como `validate`: o schema e sempre gerenciado
 pelo Flyway, nunca gerado automaticamente pelo Hibernate.
+
+## Aula
+
+`Aula` (`br.com.familychurch.p3.aula`, subpacotes `.controller`, `.service`,
+`.repository`, `.dto`, `.exception`) representa uma sessao concreta de uma
+`Turma` (ex: "Aula 1 - Provisao"), com uma janela de tempo
+(`janelaAbertura`/`janelaFechamento`) que delimita quando o check-in (QR code
+ou marcacao manual) e aceito.
+
+```
+POST /api/turmas/{turmaId}/aulas   (exige JWT)
+GET  /api/turmas/{turmaId}/aulas   (exige JWT)
+GET  /api/aulas/{id}               (exige JWT)
+GET  /api/aulas/{id}/qrcode        (exige JWT, retorna image/png)
+```
+
+A criacao de aula reaproveita a mesma validacao de `Turma` de `AlunoServiceImpl`
+(turma existe e nao esta `ENCERRADA`), com copias locais de
+`TurmaNaoEncontradaException`/`TurmaEncerradaException` em `aula.exception`,
+seguindo o mesmo padrao ja estabelecido de nao acoplar excecoes de dominio
+entre features.
+
+### QR code dinamico
+
+Cada `Aula` recebe, na criacao, um `qrToken` unico (mesmo esquema de
+`SecureRandom` + retry usado no `tokenCadastro` de `Turma`, alfabeto reduzido
+sem caracteres ambiguos). O QR code exibido em sala (projetor/TV) so codifica
+esse token — quem escaneia (ou digita o CPF na tela do check-in) manda o
+`qrToken` de volta ao backend, nunca o id interno da aula.
+
+`GET /api/aulas/{id}/qrcode` gera a imagem PNG do QR code sob demanda (via
+ZXing `QRCodeWriter`, convertida para `BufferedImage` e codificada com
+`ImageIO`, sem depender do modulo `zxing:javase`) — a imagem nao e
+persistida, e recalculada a cada requisicao a partir do `qrToken` salvo.
+
+## Presenca (check-in, WebSocket, marcacao manual)
+
+`Presenca` (`br.com.familychurch.p3.presenca`) registra o check-in de um
+`Aluno` numa `Aula`, por um dos dois metodos (`MetodoPresenca`: `QRCODE` ou
+`MANUAL`). Um aluno so pode ter uma presenca por aula
+(`uk_presenca_aluno_aula`), garantindo que reenviar o mesmo check-in nunca
+duplica o registro.
+
+### Identificacao e check-in por CPF
+
+```
+POST /api/publico/checkin
+```
+
+Rota publica (`/api/publico/**`, sem JWT), pensada para a tela de check-in do
+aluno: recebe `qrToken` (lido do QR code exibido em sala) e `cpf` (que o
+aluno ja sabe de cor, sem precisar de login). Regras aplicadas em
+`PresencaServiceImpl.checkin`, na ordem: (1) resolve a `Aula` pelo `qrToken`,
+404 (`QrCodeInvalidoException`) se nao existir; (2) valida que o momento
+atual esta dentro de `janelaAbertura`/`janelaFechamento`, 400
+(`JanelaAulaFechadaException`) caso contrario; (3) resolve o `Aluno` pelo CPF
+(normalizado, so digitos), 404 (`AlunoNaoEncontradoException`) se nao
+cadastrado; (4) valida que o aluno pertence a mesma `Turma` da aula, 400
+(`AlunoNaoPertenceATurmaException`) caso contrario; (5) valida que ainda nao
+existe presenca desse aluno nessa aula, 409 (`PresencaDuplicadaException`).
+
+### Marcacao manual (fallback)
+
+```
+POST /api/aulas/{aulaId}/presencas/manual   (exige JWT)
+```
+
+Usada pelo professor/admin para quem esqueceu o celular ou ainda nao tem o
+app (fase de transicao do Forms). Recebe o `cpf` do aluno (mesma busca por
+CPF do check-in — a especificacao pede "busca aluno por nome ou CPF"; CPF foi
+escolhido por ja ser a chave de busca unica usada em todo o resto da Fase 2).
+`validadoPor` e preenchido com o `UsuarioAdmin` autenticado (extraido do
+`UsuarioAdminDetails` via `@AuthenticationPrincipal`, sem endpoint dedicado
+para isso), nunca aceito do cliente.
+
+### Lista de presenca ao vivo (WebSocket)
+
+```
+GET  /api/aulas/{aulaId}/presencas   (exige JWT — snapshot inicial da lista)
+STOMP topic: /topic/aulas/{aulaId}/presencas
+STOMP endpoint (SockJS): /ws
+```
+
+A tela do professor carrega o estado inicial via `GET .../presencas` e depois
+assina o topico STOMP `/topic/aulas/{aulaId}/presencas` para receber cada
+novo check-in (QR code ou manual) em tempo real, sem polling. Configurado em
+`config.WebSocketConfig` (`@EnableWebSocketMessageBroker`, broker simples em
+memoria em `/topic`, endpoint SockJS em `/ws`); `PresencaServiceImpl` publica
+o mesmo `PresencaResponse` da API REST via `SimpMessagingTemplate` logo apos
+salvar cada presenca (check-in ou manual), então quem esta ouvindo o topico
+ve o mesmo formato de dado que a API retorna. `/ws/**` foi liberado em
+`SecurityConfig` (`permitAll`) porque o handshake HTTP inicial do SockJS nao
+carrega o header `Authorization` da mesma forma que uma chamada REST; a
+avaliacao de quem pode ver a lista ao vivo de uma aula especifica fica para
+uma fase futura caso vire requisito (hoje equivale ao mesmo nivel de exposicao
+de quem consegue ver o QR code projetado em sala).
+
+### Migrations (Aula/Presenca)
+
+`V7__create_aula_table.sql` cria `aula` (FK para `turma`, `uk_aula_qr_token`
+unico). `V8__create_presenca_table.sql` cria `presenca` (FK para `aluno`,
+`aula` e `usuario_admin` via `validado_por`, nullable; `uk_presenca_aluno_aula`
+garante um check-in por aluno por aula).
 
 ## Escolha de chave primaria
 
