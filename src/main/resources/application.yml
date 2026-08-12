@@ -1,10 +1,13 @@
+server:
+  port: ${PORT:8080}
+
 spring:
   application:
     name: p3
   datasource:
-    url: jdbc:postgresql://localhost:5432/chamada
-    username: chamada
-    password: chamada
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/p3db}
+    username: ${SPRING_DATASOURCE_USERNAME:chamada}
+    password: ${SPRING_DATASOURCE_PASSWORD:chamada}
   jpa:
     hibernate:
       ddl-auto: validate

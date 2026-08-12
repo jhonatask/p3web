@@ -42,7 +42,7 @@ O projeto usa `spring-boot-docker-compose`, entao o Postgres definido em
 ```
 
 Nao e necessario subir o `docker compose` manualmente. Credenciais de
-desenvolvimento (banco `chamada`, usuario `chamada`, senha `chamada`) estao
+desenvolvimento (banco `p3db`, usuario `chamada`, senha `chamada`) estao
 definidas tanto no `compose.yaml` quanto em `application.yml` — servem apenas
 para ambiente local.
 
