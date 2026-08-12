@@ -1,7 +1,8 @@
 package br.com.familychurch.p3.presenca;
 
-import br.com.familychurch.p3.aluno.Aluno;
 import br.com.familychurch.p3.aula.Aula;
+import br.com.familychurch.p3.participante.Participante;
+import br.com.familychurch.p3.turma.Turma;
 import br.com.familychurch.p3.usuarioadmin.UsuarioAdmin;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -21,6 +22,13 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.UuidGenerator;
 
+/**
+ * Presenca e identificada por {@link Participante} (nao mais por matricula
+ * numa turma especifica), pois o mesmo tipo de aula pode ser cumprido em
+ * qualquer turma (reposicao). "turma" e a turma da sessao onde a presenca
+ * aconteceu - pode ser diferente da turma de origem do participante, quando
+ * origem=REPOSICAO.
+ */
 @Entity
 @Table(name = "presenca")
 @Getter
@@ -35,8 +43,12 @@ public class Presenca {
 	private UUID id;
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "aluno_id", nullable = false)
-	private Aluno aluno;
+	@JoinColumn(name = "participante_id", nullable = false)
+	private Participante participante;
+
+	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	@JoinColumn(name = "turma_id", nullable = false)
+	private Turma turma;
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "aula_id", nullable = false)
@@ -48,6 +60,10 @@ public class Presenca {
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
 	private MetodoPresenca metodo;
+
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false)
+	private OrigemPresenca origem;
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "validado_por")

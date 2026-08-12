@@ -7,28 +7,26 @@ import java.util.UUID;
 public record AlunoResponse(
 
 		UUID id,
+		UUID participanteId,
 		String nome,
 		String cpf,
 		String celular,
 		String campus,
 		UUID turmaId,
-		LocalDateTime dataCadastro,
-		boolean consentimentoLgpd,
-		LocalDateTime consentimentoLgpdTimestamp
+		LocalDateTime dataMatricula
 
 ) {
 
 	public static AlunoResponse from(Aluno aluno) {
 		return new AlunoResponse(
 				aluno.getId(),
-				aluno.getNome(),
-				aluno.getCpf(),
-				aluno.getCelular(),
-				aluno.getCampus(),
+				aluno.getParticipante().getId(),
+				aluno.getParticipante().getNome(),
+				aluno.getParticipante().getCpf(),
+				aluno.getParticipante().getCelular(),
+				aluno.getParticipante().getCampus(),
 				aluno.getTurma().getId(),
-				aluno.getDataCadastro(),
-				aluno.isConsentimentoLgpd(),
-				aluno.getConsentimentoLgpdTimestamp());
+				aluno.getDataMatricula());
 	}
 
 }

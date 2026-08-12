@@ -1,5 +1,6 @@
 package br.com.familychurch.p3.aluno;
 
+import br.com.familychurch.p3.participante.Participante;
 import br.com.familychurch.p3.turma.Turma;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -17,6 +18,15 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.UuidGenerator;
 
+/**
+ * Matricula: liga um {@link Participante} a sua turma de origem na Escola de
+ * Hombridade. Nao e um cadastro visivel por formulario - e criada
+ * automaticamente na primeira chamada normal (nao-reposicao) do participante,
+ * sem pedir nada de novo (campus/LGPD ja vem do cadastro base, em
+ * Participante). Um participante so pode ter uma matricula para sempre
+ * (participante_id unico) - reposicao em outra turma nao cria uma nova
+ * matricula, so um registro de Presenca com origem=REPOSICAO.
+ */
 @Entity
 @Table(name = "aluno")
 @Getter
@@ -30,29 +40,15 @@ public class Aluno {
 	@UuidGenerator
 	private UUID id;
 
-	@Column(nullable = false)
-	private String nome;
-
-	@Column(nullable = false, unique = true)
-	private String cpf;
-
-	@Column(nullable = false)
-	private String celular;
-
-	@Column(nullable = false)
-	private String campus;
+	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	@JoinColumn(name = "participante_id", nullable = false, unique = true)
+	private Participante participante;
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "turma_id", nullable = false)
 	private Turma turma;
 
-	@Column(name = "data_cadastro", nullable = false)
-	private LocalDateTime dataCadastro;
-
-	@Column(name = "consentimento_lgpd", nullable = false)
-	private boolean consentimentoLgpd;
-
-	@Column(name = "consentimento_lgpd_timestamp")
-	private LocalDateTime consentimentoLgpdTimestamp;
+	@Column(name = "data_matricula", nullable = false)
+	private LocalDateTime dataMatricula;
 
 }

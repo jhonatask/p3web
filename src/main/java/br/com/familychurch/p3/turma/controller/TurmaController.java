@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -64,6 +65,11 @@ public class TurmaController {
 	@GetMapping("/api/turmas/{turmaId}/dashboard")
 	public TurmaDashboardResponse obterDashboard(@PathVariable UUID turmaId) {
 		return turmaService.obterDashboard(turmaId);
+	}
+
+	@GetMapping(value = "/api/turmas/{id}/qrcode", produces = MediaType.IMAGE_PNG_VALUE)
+	public byte[] obterQrCode(@PathVariable UUID id) {
+		return turmaService.gerarImagemQrCode(id);
 	}
 
 }

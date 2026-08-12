@@ -1,7 +1,7 @@
 package br.com.familychurch.p3.avaliacao;
 
-import br.com.familychurch.p3.aluno.Aluno;
 import br.com.familychurch.p3.aula.Aula;
+import br.com.familychurch.p3.participante.Participante;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -33,8 +33,8 @@ public class Avaliacao {
 	private UUID id;
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "aluno_id", nullable = false)
-	private Aluno aluno;
+	@JoinColumn(name = "participante_id", nullable = false)
+	private Participante participante;
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "aula_id", nullable = false)
@@ -51,5 +51,15 @@ public class Avaliacao {
 
 	@Column(nullable = false)
 	private Integer nps;
+
+	/**
+	 * Preenchidos so nas aulas 03/06/09 (3a aula de cada modulo) - fora
+	 * delas ficam nulos. Quando vem preenchidos, fazem write-back direto em
+	 * Participante (ver AvaliacaoServiceImpl).
+	 */
+	@Column(name = "deseja_servir")
+	private String desejaServir;
+
+	private String habilidades;
 
 }

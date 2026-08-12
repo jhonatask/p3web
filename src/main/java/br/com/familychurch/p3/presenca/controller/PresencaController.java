@@ -1,6 +1,7 @@
 package br.com.familychurch.p3.presenca.controller;
 
 import br.com.familychurch.p3.auth.UsuarioAdminDetails;
+import br.com.familychurch.p3.presenca.dto.ChamadaRequest;
 import br.com.familychurch.p3.presenca.dto.MarcarPresencaManualRequest;
 import br.com.familychurch.p3.presenca.dto.PresencaResponse;
 import br.com.familychurch.p3.presenca.service.PresencaService;
@@ -22,6 +23,13 @@ public class PresencaController {
 
 	public PresencaController(PresencaService presencaService) {
 		this.presencaService = presencaService;
+	}
+
+	@PostMapping("/api/publico/turmas/{token}/chamada")
+	public ResponseEntity<PresencaResponse> registrarChamada(
+			@PathVariable String token, @Valid @RequestBody ChamadaRequest request) {
+		PresencaResponse response = presencaService.registrarChamada(token, request);
+		return ResponseEntity.status(201).body(response);
 	}
 
 	@GetMapping("/api/aulas/{aulaId}/presencas")

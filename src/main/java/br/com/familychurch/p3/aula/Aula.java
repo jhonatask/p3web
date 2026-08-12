@@ -3,6 +3,8 @@ package br.com.familychurch.p3.aula;
 import br.com.familychurch.p3.turma.Turma;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
@@ -10,7 +12,6 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -18,6 +19,12 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.UuidGenerator;
 
+/**
+ * A sessao de uma aula numa turma: turma + {@link TipoAula} (catalogo) +
+ * data + status. O status e sincronizado pela agenda da turma (ver
+ * AulaServiceImpl.sincronizarStatusPorData) - nao ha mais janela de
+ * horario nem qr_token por aula, o QR code passa a ser estatico, por turma.
+ */
 @Entity
 @Table(name = "aula")
 @Getter
@@ -35,25 +42,18 @@ public class Aula {
 	@JoinColumn(name = "turma_id", nullable = false)
 	private Turma turma;
 
-	@Column(nullable = false)
-	private Integer numero;
-
-	private String modulo;
+	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	@JoinColumn(name = "tipo_aula_id", nullable = false)
+	private TipoAula tipoAula;
 
 	@Column(nullable = false)
 	private LocalDate data;
 
-	@Column(name = "janela_abertura", nullable = false)
-	private LocalDateTime janelaAbertura;
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false)
+	private StatusAula status = StatusAula.AGENDADA;
 
-	@Column(name = "janela_fechamento", nullable = false)
-	private LocalDateTime janelaFechamento;
-
-	@Column(name = "qr_token", nullable = false, unique = true)
-	private String qrToken;
-
-	public boolean janelaAberta(LocalDateTime referencia) {
-		return !referencia.isBefore(janelaAbertura) && !referencia.isAfter(janelaFechamento);
-	}
+	@Column(name = "encerrada_manualmente", nullable = false)
+	private boolean encerradaManualmente = false;
 
 }

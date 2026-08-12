@@ -36,13 +36,18 @@ public class SecurityConfig {
 
 	@Bean
 	public CorsConfigurationSource corsConfigurationSource() {
-		CorsConfiguration configuracaoPublica = new CorsConfiguration();
-		configuracaoPublica.setAllowedOrigins(corsProperties.allowedOrigins());
-		configuracaoPublica.setAllowedMethods(List.of("GET", "POST"));
-		configuracaoPublica.setAllowedHeaders(List.of("*"));
+		// A area logada do lider (painel/gestao de turma) passa a chamar
+		// endpoints autenticados via browser - o CORS nao pode mais ficar
+		// restrito a /api/publico/**. allowCredentials habilita o header
+		// Authorization (Bearer) em requisicoes cross-origin.
+		CorsConfiguration configuracaoGeral = new CorsConfiguration();
+		configuracaoGeral.setAllowedOrigins(corsProperties.allowedOrigins());
+		configuracaoGeral.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE"));
+		configuracaoGeral.setAllowedHeaders(List.of("*"));
+		configuracaoGeral.setAllowCredentials(true);
 
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-		source.registerCorsConfiguration("/api/publico/**", configuracaoPublica);
+		source.registerCorsConfiguration("/api/**", configuracaoGeral);
 		return source;
 	}
 

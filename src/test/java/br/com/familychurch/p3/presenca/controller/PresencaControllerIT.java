@@ -1,8 +1,8 @@
 package br.com.familychurch.p3.presenca.controller;
 
-import static org.hamcrest.Matchers.hasSize;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -12,13 +12,13 @@ import br.com.familychurch.p3.aula.repository.AulaRepository;
 import br.com.familychurch.p3.avaliacao.repository.AvaliacaoRepository;
 import br.com.familychurch.p3.curso.Curso;
 import br.com.familychurch.p3.curso.repository.CursoRepository;
-import br.com.familychurch.p3.interesse.repository.InteresseRepository;
+import br.com.familychurch.p3.historico.repository.HistoricoItemRepository;
+import br.com.familychurch.p3.participante.repository.ParticipanteRepository;
 import br.com.familychurch.p3.presenca.repository.PresencaRepository;
 import br.com.familychurch.p3.turma.StatusTurma;
 import br.com.familychurch.p3.turma.Turma;
 import br.com.familychurch.p3.turma.repository.TurmaRepository;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,8 +28,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 class PresencaControllerIT extends IntegrationTestSupport {
 
-	private static final String CPF_ALUNO_TURMA = "52998224725";
-	private static final String CPF_ALUNO_OUTRA_TURMA = "11144477735";
+	private static final String CPF_PARTICIPANTE = "52998224725";
+	private static final String CPF_NAO_CADASTRADO = "11144477735";
 
 	@Autowired
 	private MockMvc mockMvc;
@@ -53,178 +53,208 @@ class PresencaControllerIT extends IntegrationTestSupport {
 	private AvaliacaoRepository avaliacaoRepository;
 
 	@Autowired
-	private InteresseRepository interesseRepository;
+	private ParticipanteRepository participanteRepository;
+
+	@Autowired
+	private HistoricoItemRepository historicoItemRepository;
 
 	private String tokenAdmin;
-	private Turma turmaAtiva;
 
 	@BeforeEach
 	void configurarCenario() throws Exception {
+		historicoItemRepository.deleteAll();
 		avaliacaoRepository.deleteAll();
-		interesseRepository.deleteAll();
 		presencaRepository.deleteAll();
 		aulaRepository.deleteAll();
 		alunoRepository.deleteAll();
+		participanteRepository.deleteAll();
 		turmaRepository.deleteAll();
-		cursoRepository.deleteAll();
 		tokenAdmin = obterTokenAdmin();
-		turmaAtiva = criarTurma(StatusTurma.ATIVA);
-		cadastrarAluno(turmaAtiva.getTokenCadastro(), CPF_ALUNO_TURMA);
 	}
 
 	@Test
-	void deveRegistrarCheckinComQrTokenEcpfValidos() throws Exception {
-		String qrToken = criarAulaComJanelaAberta();
+	void deveRegistrarChamadaQuandoParticipanteCadastradoEAulaAtiva() throws Exception {
+		cadastrarParticipante(CPF_PARTICIPANTE, "Joao Silva");
+		Turma turma = criarTurmaComAulaAtivaHoje(1);
 
-		mockMvc.perform(post("/api/publico/checkin")
+		mockMvc.perform(post("/api/publico/turmas/{token}/chamada", turma.getTokenCadastro())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
-						{"qrToken": "%s", "cpf": "%s"}
-						""".formatted(qrToken, CPF_ALUNO_TURMA)))
+						{"cpf": "%s"}
+						""".formatted(CPF_PARTICIPANTE)))
 				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.metodo").value("QRCODE"));
-	}
-
-	@Test
-	void deveRetornar404QuandoQrTokenInvalido() throws Exception {
-		mockMvc.perform(post("/api/publico/checkin")
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{"qrToken": "TOKEN-INEXISTENTE", "cpf": "%s"}
-						""".formatted(CPF_ALUNO_TURMA)))
-				.andExpect(status().isNotFound());
-	}
-
-	@Test
-	void deveRetornar400QuandoJanelaDaAulaFechada() throws Exception {
-		String qrToken = criarAulaComJanela(
-				LocalDateTime.now().minusHours(3), LocalDateTime.now().minusHours(1));
-
-		mockMvc.perform(post("/api/publico/checkin")
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{"qrToken": "%s", "cpf": "%s"}
-						""".formatted(qrToken, CPF_ALUNO_TURMA)))
-				.andExpect(status().isBadRequest());
+				.andExpect(jsonPath("$.participanteNome").value("Joao Silva"))
+				.andExpect(jsonPath("$.metodo").value("FORMULARIO"))
+				.andExpect(jsonPath("$.origem").value("CHAMADA"));
 	}
 
 	@Test
 	void deveRetornar404QuandoCpfNaoCadastrado() throws Exception {
-		String qrToken = criarAulaComJanelaAberta();
+		Turma turma = criarTurmaComAulaAtivaHoje(1);
 
-		mockMvc.perform(post("/api/publico/checkin")
+		mockMvc.perform(post("/api/publico/turmas/{token}/chamada", turma.getTokenCadastro())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
-						{"qrToken": "%s", "cpf": "12345678909"}
-						""".formatted(qrToken)))
+						{"cpf": "%s"}
+						""".formatted(CPF_NAO_CADASTRADO)))
 				.andExpect(status().isNotFound());
 	}
 
 	@Test
-	void deveRetornar400QuandoAlunoNaoPertenceATurmaDaAula() throws Exception {
-		Turma outraTurma = criarTurma(StatusTurma.ATIVA);
-		cadastrarAluno(outraTurma.getTokenCadastro(), CPF_ALUNO_OUTRA_TURMA);
-		String qrToken = criarAulaComJanelaAberta();
+	void deveRetornar404QuandoNenhumaAulaAtivaNaTurma() throws Exception {
+		cadastrarParticipante(CPF_PARTICIPANTE, "Joao Silva");
+		Turma turma = criarTurma(StatusTurma.ATIVA);
+		definirAgenda(turma.getId(), obterTipoAulaPorNumero(1), LocalDate.now().plusDays(7));
 
-		mockMvc.perform(post("/api/publico/checkin")
+		mockMvc.perform(post("/api/publico/turmas/{token}/chamada", turma.getTokenCadastro())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
-						{"qrToken": "%s", "cpf": "%s"}
-						""".formatted(qrToken, CPF_ALUNO_OUTRA_TURMA)))
-				.andExpect(status().isBadRequest());
+						{"cpf": "%s"}
+						""".formatted(CPF_PARTICIPANTE)))
+				.andExpect(status().isNotFound());
 	}
 
 	@Test
-	void deveRetornar409QuandoCheckinDuplicado() throws Exception {
-		String qrToken = criarAulaComJanelaAberta();
-		realizarCheckin(qrToken, CPF_ALUNO_TURMA);
+	void deveSerIdempotenteAoRegistrarChamadaDuasVezesNaMesmaAula() throws Exception {
+		cadastrarParticipante(CPF_PARTICIPANTE, "Joao Silva");
+		Turma turma = criarTurmaComAulaAtivaHoje(1);
+		registrarChamada(turma.getTokenCadastro(), CPF_PARTICIPANTE);
 
-		mockMvc.perform(post("/api/publico/checkin")
+		mockMvc.perform(post("/api/publico/turmas/{token}/chamada", turma.getTokenCadastro())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
-						{"qrToken": "%s", "cpf": "%s"}
-						""".formatted(qrToken, CPF_ALUNO_TURMA)))
-				.andExpect(status().isConflict());
+						{"cpf": "%s"}
+						""".formatted(CPF_PARTICIPANTE)))
+				.andExpect(status().isCreated());
+
+		assertThat(presencaRepository.count()).isEqualTo(1);
+	}
+
+	@Test
+	void deveClassificarComoReposicaoQuandoChamadaEmTurmaDiferenteDaMatricula() throws Exception {
+		cadastrarParticipante(CPF_PARTICIPANTE, "Joao Silva");
+		Turma turmaOrigem = criarTurmaComAulaAtivaHoje(1);
+		registrarChamada(turmaOrigem.getTokenCadastro(), CPF_PARTICIPANTE);
+
+		Turma outraTurma = criarTurmaComAulaAtivaHoje(2);
+
+		mockMvc.perform(post("/api/publico/turmas/{token}/chamada", outraTurma.getTokenCadastro())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"cpf": "%s"}
+						""".formatted(CPF_PARTICIPANTE)))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.origem").value("REPOSICAO"));
+
+		assertThat(alunoRepository.count()).isEqualTo(1);
+	}
+
+	@Test
+	void deveGravarConclusaoNoHistoricoQuandoTodosOsModulosFicamAptos() throws Exception {
+		cadastrarParticipante(CPF_PARTICIPANTE, "Joao Silva");
+		Turma turma = criarTurma(StatusTurma.ATIVA);
+
+		// Agenda com datas passadas distintas (uma por semana) e marcacao
+		// manual do lider - evita depender de "aula ativa hoje" (so uma
+		// sessao pode estar ATIVA por vez) para simular as 9 aulas do curso
+		// completas de uma vez.
+		for (int numero = 1; numero <= 9; numero++) {
+			definirAgenda(turma.getId(), obterTipoAulaPorNumero(numero), LocalDate.now().minusWeeks(9 - numero));
+			String aulaId = aulaRepository.findByTurmaIdAndTipoAulaId(turma.getId(), obterTipoAulaPorNumero(numero))
+					.orElseThrow().getId().toString();
+			marcarPresencaManual(aulaId, CPF_PARTICIPANTE);
+		}
+
+		var participanteId = participanteRepository.findByCpf(CPF_PARTICIPANTE).orElseThrow().getId();
+		var historico = historicoItemRepository.findByParticipanteId(participanteId);
+		assertThat(historico).anySatisfy(item -> {
+			assertThat(item.getItem()).isEqualTo("Escola de Hombridade");
+			assertThat(item.getStatus().name()).isEqualTo("CONCLUIDO");
+			assertThat(item.getOrigem().name()).isEqualTo("CHAMADA");
+		});
 	}
 
 	@Test
 	void deveMarcarPresencaManualComoFallback() throws Exception {
-		String aulaId = criarAula(LocalDateTime.now().minusHours(3), LocalDateTime.now().minusHours(1));
+		cadastrarParticipante(CPF_PARTICIPANTE, "Joao Silva");
+		Turma turma = criarTurmaComAulaAtivaHoje(1);
+		String aulaId = aulaRepository.findByTurmaId(turma.getId()).get(0).getId().toString();
 
 		mockMvc.perform(post("/api/aulas/{aulaId}/presencas/manual", aulaId)
 				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{"cpf": "%s"}
-						""".formatted(CPF_ALUNO_TURMA)))
+						""".formatted(CPF_PARTICIPANTE)))
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.metodo").value("MANUAL"))
 				.andExpect(jsonPath("$.validadoPorNome").isNotEmpty());
 	}
 
-	@Test
-	void deveListarPresencasDeUmaAula() throws Exception {
-		String qrToken = criarAulaComJanelaAberta();
-		realizarCheckin(qrToken, CPF_ALUNO_TURMA);
-		String aulaId = aulaRepository.findByQrToken(qrToken).orElseThrow().getId().toString();
-
-		mockMvc.perform(get("/api/aulas/{aulaId}/presencas", aulaId)
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$", hasSize(1)))
-				.andExpect(jsonPath("$[0].alunoNome").value("Joao Silva"));
-	}
-
-	private void realizarCheckin(String qrToken, String cpf) throws Exception {
-		mockMvc.perform(post("/api/publico/checkin")
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{"qrToken": "%s", "cpf": "%s"}
-						""".formatted(qrToken, cpf)));
-	}
-
-	private String criarAulaComJanelaAberta() throws Exception {
-		return criarAulaEObterQrToken(LocalDateTime.now().minusHours(1), LocalDateTime.now().plusHours(1));
-	}
-
-	private String criarAulaComJanela(LocalDateTime abertura, LocalDateTime fechamento) throws Exception {
-		return criarAulaEObterQrToken(abertura, fechamento);
-	}
-
-	private String criarAulaEObterQrToken(LocalDateTime abertura, LocalDateTime fechamento) throws Exception {
-		String aulaId = criarAula(abertura, fechamento);
-		return aulaRepository.findById(java.util.UUID.fromString(aulaId)).orElseThrow().getQrToken();
-	}
-
-	private String criarAula(LocalDateTime abertura, LocalDateTime fechamento) throws Exception {
-		DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
-		var resultado = mockMvc.perform(post("/api/turmas/{turmaId}/aulas", turmaAtiva.getId())
+	private void marcarPresencaManual(String aulaId, String cpf) throws Exception {
+		mockMvc.perform(post("/api/aulas/{aulaId}/presencas/manual", aulaId)
 				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
-						{"numero": 1, "data": "2026-07-02", "janelaAbertura": "%s", "janelaFechamento": "%s"}
-						""".formatted(abertura.format(formatter), fechamento.format(formatter))))
-				.andReturn();
-		return objectMapper.readTree(resultado.getResponse().getContentAsString()).get("id").asText();
+						{"cpf": "%s"}
+						""".formatted(cpf)))
+				.andExpect(status().isCreated());
 	}
 
-	private void cadastrarAluno(String tokenCadastroTurma, String cpf) throws Exception {
-		mockMvc.perform(post("/api/publico/turmas/{token}/alunos", tokenCadastroTurma)
+	private void registrarChamada(String token, String cpf) throws Exception {
+		mockMvc.perform(post("/api/publico/turmas/{token}/chamada", token)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
-						{"nome": "Joao Silva", "cpf": "%s", "celular": "11999999999", "campus": "Campus 85", "aceiteLgpd": true}
+						{"cpf": "%s"}
 						""".formatted(cpf)));
 	}
 
+	private void definirAgenda(java.util.UUID turmaId, java.util.UUID tipoAulaId, LocalDate data) throws Exception {
+		mockMvc.perform(put("/api/turmas/{turmaId}/agenda", turmaId)
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"itens": [{"tipoAulaId": "%s", "data": "%s"}]}
+						""".formatted(tipoAulaId, data)));
+	}
+
+	private Turma criarTurmaComAulaAtivaHoje(int numeroTipoAula) throws Exception {
+		Turma turma = criarTurma(StatusTurma.ATIVA);
+		definirAgenda(turma.getId(), obterTipoAulaPorNumero(numeroTipoAula), LocalDate.now());
+		return turma;
+	}
+
+	private void cadastrarParticipante(String cpf, String nome) throws Exception {
+		mockMvc.perform(post("/api/publico/participantes")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "nome": "%s",
+						  "cpf": "%s",
+						  "dataNascimento": "1990-05-20",
+						  "estadoCivil": "SOLTEIRO",
+						  "temFilhos": false,
+						  "cep": "74000-000",
+						  "bairro": "Centro",
+						  "cidade": "Goiania",
+						  "uf": "GO",
+						  "tempoNaFamily": "MAIS_DE_3_ANOS",
+						  "batizado": true,
+						  "serveMinisterio": false,
+						  "cursosOutros": "Curso de Lideranca Local",
+						  "eventosOutros": "Retiro da Familia",
+						  "participaGc": false,
+						  "aceiteLgpd": true
+						}
+						""".formatted(nome, cpf)));
+	}
+
 	private Turma criarTurma(StatusTurma status) {
-		Curso curso = new Curso();
-		curso.setNome("Escola de Hombridade " + status + System.nanoTime());
-		curso.setAtivo(true);
-		cursoRepository.save(curso);
+		Curso curso = cursoRepository.findById(obterCursoEscolaHombridade()).orElseThrow();
 
 		Turma turma = new Turma();
 		turma.setCurso(curso);
-		turma.setNome("Campus 85 - Turma 13");
+		turma.setNome("Campus 85 - Turma " + System.nanoTime());
 		turma.setTokenCadastro("TK" + System.nanoTime() % 1_000_000);
 		turma.setStatus(status);
 		return turmaRepository.save(turma);

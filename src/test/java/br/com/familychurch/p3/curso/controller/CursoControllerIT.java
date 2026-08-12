@@ -1,6 +1,6 @@
 package br.com.familychurch.p3.curso.controller;
 
-import static org.hamcrest.Matchers.hasSize;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -10,7 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import br.com.familychurch.p3.IntegrationTestSupport;
 import br.com.familychurch.p3.aluno.repository.AlunoRepository;
 import br.com.familychurch.p3.aula.repository.AulaRepository;
-import br.com.familychurch.p3.curso.repository.CursoRepository;
+import br.com.familychurch.p3.avaliacao.repository.AvaliacaoRepository;
 import br.com.familychurch.p3.presenca.repository.PresencaRepository;
 import br.com.familychurch.p3.turma.repository.TurmaRepository;
 import java.util.UUID;
@@ -27,9 +27,6 @@ class CursoControllerIT extends IntegrationTestSupport {
 	private MockMvc mockMvc;
 
 	@Autowired
-	private CursoRepository cursoRepository;
-
-	@Autowired
 	private TurmaRepository turmaRepository;
 
 	@Autowired
@@ -41,41 +38,49 @@ class CursoControllerIT extends IntegrationTestSupport {
 	@Autowired
 	private PresencaRepository presencaRepository;
 
+	@Autowired
+	private AvaliacaoRepository avaliacaoRepository;
+
 	private String tokenAdmin;
 
 	@BeforeEach
 	void configurarCenario() throws Exception {
+		avaliacaoRepository.deleteAll();
 		presencaRepository.deleteAll();
 		aulaRepository.deleteAll();
 		alunoRepository.deleteAll();
 		turmaRepository.deleteAll();
-		cursoRepository.deleteAll();
+		// Nao apaga curso: "Curso de Teste" e dado de referencia
+		// semeado pela migration V15 (tem tipo_aula dependente) - os testes
+		// aqui usam nomes de curso proprios, sem colidir com ele.
 		tokenAdmin = obterTokenAdmin();
 	}
 
 	@Test
 	void deveCriarCursoComSucesso() throws Exception {
+		String nome = "Curso de Teste " + System.nanoTime();
 		mockMvc.perform(post("/api/cursos")
 				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
-						{"nome": "Escola de Hombridade", "descricao": "Curso base"}
-						"""))
+						{"nome": "%s", "descricao": "Curso base"}
+						""".formatted(nome)))
 				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.nome").value("Escola de Hombridade"))
+				.andExpect(jsonPath("$.nome").value(nome))
 				.andExpect(jsonPath("$.ativo").value(true));
 	}
 
 	@Test
 	void deveRetornar409QuandoCursoJaExisteComMesmoNome() throws Exception {
-		criarCurso("Escola de Hombridade");
+		String nome = "Curso de Teste " + System.nanoTime();
+		criarCurso(nome);
 
 		mockMvc.perform(post("/api/cursos")
 				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
-						{"nome": "Escola de Hombridade", "descricao": "Duplicado"}
-						"""))
+						{"nome": "%s", "descricao": "Duplicado"}
+						""".formatted(nome)))
 				.andExpect(status().isConflict())
 				.andExpect(jsonPath("$.status").value(409));
 	}
@@ -92,16 +97,26 @@ class CursoControllerIT extends IntegrationTestSupport {
 
 	@Test
 	void deveListarApenasCursosAtivosQuandoFiltroAtivoTrue() throws Exception {
-		String idCursoInativo = criarCurso("Curso Inativo");
-		criarCurso("Curso Ativo");
+		long sufixo = System.nanoTime();
+		String nomeInativo = "Curso Inativo " + sufixo;
+		String nomeAtivo = "Curso Ativo " + sufixo;
+		String idCursoInativo = criarCurso(nomeInativo);
+		criarCurso(nomeAtivo);
 		mockMvc.perform(patch("/api/cursos/{id}/desativar", idCursoInativo)
 				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin));
 
-		mockMvc.perform(get("/api/cursos").param("ativo", "true")
+		// Nao assume lista exclusiva: curso e dado misto (referencia semeada
+		// + dado de teste, nunca limpo por completo entre testes desta
+		// classe) - so verifica presenca/ausencia dos nomes desta execucao.
+		var resultado = mockMvc.perform(get("/api/cursos").param("ativo", "true")
 				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$", hasSize(1)))
-				.andExpect(jsonPath("$[0].nome").value("Curso Ativo"));
+				.andReturn();
+		var nomes = objectMapper.readTree(resultado.getResponse().getContentAsString());
+		var nomesAtivos = new java.util.ArrayList<String>();
+		nomes.forEach(node -> nomesAtivos.add(node.get("nome").asText()));
+
+		assertThat(nomesAtivos).contains(nomeAtivo).doesNotContain(nomeInativo);
 	}
 
 	@Test

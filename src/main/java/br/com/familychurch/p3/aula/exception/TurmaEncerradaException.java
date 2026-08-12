@@ -9,4 +9,8 @@ public class TurmaEncerradaException extends ConflictException {
 		super("Turma '%s' esta encerrada e nao aceita novas aulas".formatted(turmaId));
 	}
 
+	public TurmaEncerradaException(String tokenCadastro) {
+		super("Turma referente ao token '%s' esta encerrada".formatted(tokenCadastro));
+	}
+
 }

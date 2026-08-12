@@ -11,6 +11,7 @@ import br.com.familychurch.p3.participante.Participante;
 import br.com.familychurch.p3.participante.dto.ParticipanteCadastroRequest;
 import br.com.familychurch.p3.participante.dto.ParticipanteCadastroResponse;
 import br.com.familychurch.p3.participante.dto.ParticipanteResponse;
+import br.com.familychurch.p3.participante.dto.ParticipanteResumoResponse;
 import br.com.familychurch.p3.participante.exception.ConsentimentoLgpdObrigatorioException;
 import br.com.familychurch.p3.participante.exception.ParticipanteNaoEncontradoException;
 import br.com.familychurch.p3.participante.exception.QuaisGcsObrigatorioException;
@@ -67,6 +68,15 @@ public class ParticipanteServiceImpl implements ParticipanteService {
 				.map(HistoricoItemResponse::from)
 				.toList();
 		return ParticipanteResponse.from(participante, historico);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public ParticipanteResumoResponse buscarResumoPorCpf(String cpf) {
+		String cpfLimpo = cpf.replaceAll("\\D", "");
+		Participante participante = participanteRepository.findByCpf(cpfLimpo)
+				.orElseThrow(() -> new ParticipanteNaoEncontradoException(cpfLimpo));
+		return ParticipanteResumoResponse.from(participante);
 	}
 
 	private void preencherDadosDoFormulario(Participante participante, ParticipanteCadastroRequest request, String cpf) {

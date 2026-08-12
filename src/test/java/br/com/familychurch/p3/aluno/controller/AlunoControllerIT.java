@@ -3,6 +3,7 @@ package br.com.familychurch.p3.aluno.controller;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -12,11 +13,13 @@ import br.com.familychurch.p3.aula.repository.AulaRepository;
 import br.com.familychurch.p3.avaliacao.repository.AvaliacaoRepository;
 import br.com.familychurch.p3.curso.Curso;
 import br.com.familychurch.p3.curso.repository.CursoRepository;
-import br.com.familychurch.p3.interesse.repository.InteresseRepository;
+import br.com.familychurch.p3.historico.repository.HistoricoItemRepository;
+import br.com.familychurch.p3.participante.repository.ParticipanteRepository;
 import br.com.familychurch.p3.presenca.repository.PresencaRepository;
 import br.com.familychurch.p3.turma.StatusTurma;
 import br.com.familychurch.p3.turma.Turma;
 import br.com.familychurch.p3.turma.repository.TurmaRepository;
+import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +27,11 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+/**
+ * Aluno nao tem mais cadastro proprio por formulario (ver
+ * PresencaControllerIT para a matricula automatica na primeira chamada) -
+ * este IT cobre so a listagem, unico endpoint que resta na feature.
+ */
 class AlunoControllerIT extends IntegrationTestSupport {
 
 	private static final String CPF_VALIDO = "52998224725";
@@ -50,7 +58,10 @@ class AlunoControllerIT extends IntegrationTestSupport {
 	private AvaliacaoRepository avaliacaoRepository;
 
 	@Autowired
-	private InteresseRepository interesseRepository;
+	private ParticipanteRepository participanteRepository;
+
+	@Autowired
+	private HistoricoItemRepository historicoItemRepository;
 
 	private String tokenAdmin;
 	private Turma turmaAtiva;
@@ -58,70 +69,14 @@ class AlunoControllerIT extends IntegrationTestSupport {
 	@BeforeEach
 	void configurarCenario() throws Exception {
 		avaliacaoRepository.deleteAll();
-		interesseRepository.deleteAll();
+		historicoItemRepository.deleteAll();
 		presencaRepository.deleteAll();
 		aulaRepository.deleteAll();
 		alunoRepository.deleteAll();
+		participanteRepository.deleteAll();
 		turmaRepository.deleteAll();
-		cursoRepository.deleteAll();
 		tokenAdmin = obterTokenAdmin();
 		turmaAtiva = criarTurma(StatusTurma.ATIVA);
-	}
-
-	@Test
-	void deveCadastrarAlunoComCpfValidoEAceiteLgpd() throws Exception {
-		mockMvc.perform(post("/api/publico/turmas/{token}/alunos", turmaAtiva.getTokenCadastro())
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{"nome": "Joao Silva", "cpf": "%s", "celular": "11999999999", "campus": "Campus 85", "aceiteLgpd": true}
-						""".formatted(CPF_VALIDO)))
-				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.nome").value("Joao Silva"));
-	}
-
-	@Test
-	void deveRetornar400QuandoCpfComDigitoVerificadorInvalido() throws Exception {
-		mockMvc.perform(post("/api/publico/turmas/{token}/alunos", turmaAtiva.getTokenCadastro())
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{"nome": "Joao Silva", "cpf": "52998224700", "celular": "11999999999", "campus": "Campus 85", "aceiteLgpd": true}
-						"""))
-				.andExpect(status().isBadRequest())
-				.andExpect(jsonPath("$.erros[0].campo").value("cpf"));
-	}
-
-	@Test
-	void deveRetornar409QuandoCpfJaCadastrado() throws Exception {
-		cadastrarAluno(turmaAtiva.getTokenCadastro(), CPF_VALIDO);
-
-		mockMvc.perform(post("/api/publico/turmas/{token}/alunos", turmaAtiva.getTokenCadastro())
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{"nome": "Outro Aluno", "cpf": "%s", "celular": "11999999999", "campus": "Campus 85", "aceiteLgpd": true}
-						""".formatted(CPF_VALIDO)))
-				.andExpect(status().isConflict());
-	}
-
-	@Test
-	void deveRetornar400QuandoAceiteLgpdFalse() throws Exception {
-		mockMvc.perform(post("/api/publico/turmas/{token}/alunos", turmaAtiva.getTokenCadastro())
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{"nome": "Joao Silva", "cpf": "%s", "celular": "11999999999", "campus": "Campus 85", "aceiteLgpd": false}
-						""".formatted(CPF_VALIDO)))
-				.andExpect(status().isBadRequest());
-	}
-
-	@Test
-	void deveRetornar409QuandoTurmaEncerrada() throws Exception {
-		Turma turmaEncerrada = criarTurma(StatusTurma.ENCERRADA);
-
-		mockMvc.perform(post("/api/publico/turmas/{token}/alunos", turmaEncerrada.getTokenCadastro())
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{"nome": "Joao Silva", "cpf": "%s", "celular": "11999999999", "campus": "Campus 85", "aceiteLgpd": true}
-						""".formatted(CPF_VALIDO)))
-				.andExpect(status().isConflict());
 	}
 
 	@Test
@@ -132,7 +87,18 @@ class AlunoControllerIT extends IntegrationTestSupport {
 
 	@Test
 	void deveListarAlunosDaTurmaComTokenValido() throws Exception {
-		cadastrarAluno(turmaAtiva.getTokenCadastro(), CPF_VALIDO);
+		cadastrarParticipante(CPF_VALIDO, "Joao Silva");
+		mockMvc.perform(put("/api/turmas/{turmaId}/agenda", turmaAtiva.getId())
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"itens": [{"tipoAulaId": "%s", "data": "%s"}]}
+						""".formatted(obterTipoAulaPorNumero(1), LocalDate.now())));
+		mockMvc.perform(post("/api/publico/turmas/{token}/chamada", turmaAtiva.getTokenCadastro())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"cpf": "%s"}
+						""".formatted(CPF_VALIDO)));
 
 		mockMvc.perform(get("/api/turmas/{turmaId}/alunos", turmaAtiva.getId())
 				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin))
@@ -141,23 +107,37 @@ class AlunoControllerIT extends IntegrationTestSupport {
 				.andExpect(jsonPath("$[0].cpf").value(CPF_VALIDO));
 	}
 
-	private void cadastrarAluno(String tokenCadastroTurma, String cpf) throws Exception {
-		mockMvc.perform(post("/api/publico/turmas/{token}/alunos", tokenCadastroTurma)
+	private void cadastrarParticipante(String cpf, String nome) throws Exception {
+		mockMvc.perform(post("/api/publico/participantes")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
-						{"nome": "Joao Silva", "cpf": "%s", "celular": "11999999999", "campus": "Campus 85", "aceiteLgpd": true}
-						""".formatted(cpf)));
+						{
+						  "nome": "%s",
+						  "cpf": "%s",
+						  "dataNascimento": "1990-05-20",
+						  "estadoCivil": "SOLTEIRO",
+						  "temFilhos": false,
+						  "cep": "74000-000",
+						  "bairro": "Centro",
+						  "cidade": "Goiania",
+						  "uf": "GO",
+						  "tempoNaFamily": "MAIS_DE_3_ANOS",
+						  "batizado": true,
+						  "serveMinisterio": false,
+						  "cursosOutros": "Curso de Lideranca Local",
+						  "eventosOutros": "Retiro da Familia",
+						  "participaGc": false,
+						  "aceiteLgpd": true
+						}
+						""".formatted(nome, cpf)));
 	}
 
 	private Turma criarTurma(StatusTurma status) {
-		Curso curso = new Curso();
-		curso.setNome("Escola de Hombridade " + status + System.nanoTime());
-		curso.setAtivo(true);
-		cursoRepository.save(curso);
+		Curso curso = cursoRepository.findById(obterCursoEscolaHombridade()).orElseThrow();
 
 		Turma turma = new Turma();
 		turma.setCurso(curso);
-		turma.setNome("Campus 85 - Turma 13");
+		turma.setNome("Campus 85 - Turma " + System.nanoTime());
 		turma.setTokenCadastro("TK" + System.nanoTime() % 1_000_000);
 		turma.setStatus(status);
 		return turmaRepository.save(turma);

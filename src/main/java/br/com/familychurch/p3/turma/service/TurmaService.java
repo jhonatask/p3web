@@ -22,4 +22,6 @@ public interface TurmaService {
 
 	TurmaDashboardResponse obterDashboard(UUID turmaId);
 
+	byte[] gerarImagemQrCode(UUID turmaId);
+
 }

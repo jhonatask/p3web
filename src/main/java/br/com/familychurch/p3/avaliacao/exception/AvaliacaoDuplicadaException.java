@@ -5,8 +5,8 @@ import java.util.UUID;
 
 public class AvaliacaoDuplicadaException extends ConflictException {
 
-	public AvaliacaoDuplicadaException(UUID alunoId, UUID aulaId) {
-		super("Aluno '%s' ja avaliou a aula '%s'".formatted(alunoId, aulaId));
+	public AvaliacaoDuplicadaException(UUID participanteId, UUID aulaId) {
+		super("Participante '%s' ja avaliou a aula '%s'".formatted(participanteId, aulaId));
 	}
 
 }

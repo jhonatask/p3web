@@ -3,6 +3,7 @@ package br.com.familychurch.p3.participante.controller;
 import br.com.familychurch.p3.participante.dto.ParticipanteCadastroRequest;
 import br.com.familychurch.p3.participante.dto.ParticipanteCadastroResponse;
 import br.com.familychurch.p3.participante.dto.ParticipanteResponse;
+import br.com.familychurch.p3.participante.dto.ParticipanteResumoResponse;
 import br.com.familychurch.p3.participante.service.ParticipanteService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +31,11 @@ public class ParticipanteController {
 	@GetMapping("/api/participantes/{cpf}")
 	public ParticipanteResponse buscarPorCpf(@PathVariable String cpf) {
 		return participanteService.buscarPorCpf(cpf);
+	}
+
+	@GetMapping("/api/publico/participantes/{cpf}/resumo")
+	public ParticipanteResumoResponse buscarResumoPorCpf(@PathVariable String cpf) {
+		return participanteService.buscarResumoPorCpf(cpf);
 	}
 
 }

@@ -44,6 +44,9 @@ public class Participante {
 	@Column(name = "celular")
 	private String celular;
 
+	@Column(name = "campus")
+	private String campus;
+
 	@Column(name = "data_nascimento")
 	private LocalDate dataNascimento;
 

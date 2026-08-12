@@ -2,8 +2,7 @@ package br.com.familychurch.p3.aula.controller;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -13,11 +12,11 @@ import br.com.familychurch.p3.aula.repository.AulaRepository;
 import br.com.familychurch.p3.avaliacao.repository.AvaliacaoRepository;
 import br.com.familychurch.p3.curso.Curso;
 import br.com.familychurch.p3.curso.repository.CursoRepository;
-import br.com.familychurch.p3.interesse.repository.InteresseRepository;
 import br.com.familychurch.p3.presenca.repository.PresencaRepository;
 import br.com.familychurch.p3.turma.StatusTurma;
 import br.com.familychurch.p3.turma.Turma;
 import br.com.familychurch.p3.turma.repository.TurmaRepository;
+import java.time.LocalDate;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -49,116 +48,118 @@ class AulaControllerIT extends IntegrationTestSupport {
 	@Autowired
 	private AvaliacaoRepository avaliacaoRepository;
 
-	@Autowired
-	private InteresseRepository interesseRepository;
-
 	private String tokenAdmin;
 	private Turma turmaAtiva;
 
 	@BeforeEach
 	void configurarCenario() throws Exception {
 		avaliacaoRepository.deleteAll();
-		interesseRepository.deleteAll();
 		presencaRepository.deleteAll();
 		aulaRepository.deleteAll();
 		alunoRepository.deleteAll();
 		turmaRepository.deleteAll();
-		cursoRepository.deleteAll();
 		tokenAdmin = obterTokenAdmin();
 		turmaAtiva = criarTurma(StatusTurma.ATIVA);
 	}
 
 	@Test
-	void deveCriarAulaComQrTokenUnico() throws Exception {
-		mockMvc.perform(post("/api/turmas/{turmaId}/aulas", turmaAtiva.getId())
+	void deveDefinirAgendaCriandoUmaAulaPorTipoDeAula() throws Exception {
+		UUID tipoAula1 = obterTipoAulaPorNumero(1);
+		UUID tipoAula2 = obterTipoAulaPorNumero(2);
+
+		mockMvc.perform(put("/api/turmas/{turmaId}/agenda", turmaAtiva.getId())
 				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
-						{"numero": 1, "modulo": "Provisao", "data": "2026-07-02", "janelaAbertura": "2026-07-02T19:00:00", "janelaFechamento": "2026-07-02T21:00:00"}
-						"""))
-				.andExpect(status().isCreated())
-				.andExpect(header().exists(HttpHeaders.LOCATION))
-				.andExpect(jsonPath("$.numero").value(1))
-				.andExpect(jsonPath("$.qrToken").isNotEmpty());
+						{"itens": [
+							{"tipoAulaId": "%s", "data": "2026-01-06"},
+							{"tipoAulaId": "%s", "data": "2026-01-13"}
+						]}
+						""".formatted(tipoAula1, tipoAula2)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$", hasSize(2)))
+				.andExpect(jsonPath("$[0].numero").value(1))
+				.andExpect(jsonPath("$[1].numero").value(2));
 	}
 
 	@Test
-	void deveRetornar404QuandoTurmaInexistenteAoCriarAula() throws Exception {
-		UUID turmaInexistente = UUID.randomUUID();
+	void deveMarcarAulaComoAtivaQuandoDataDaAgendaEHoje() throws Exception {
+		UUID tipoAula1 = obterTipoAulaPorNumero(1);
+		definirAgenda(turmaAtiva.getId(), tipoAula1, LocalDate.now());
 
-		mockMvc.perform(post("/api/turmas/{turmaId}/aulas", turmaInexistente)
+		mockMvc.perform(get("/api/publico/turmas/{token}/aula-ativa", turmaAtiva.getTokenCadastro()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.numero").value(1))
+				.andExpect(jsonPath("$.status").value("ATIVA"));
+	}
+
+	@Test
+	void deveRetornar404QuandoNenhumaAulaAtivaHoje() throws Exception {
+		UUID tipoAula1 = obterTipoAulaPorNumero(1);
+		definirAgenda(turmaAtiva.getId(), tipoAula1, LocalDate.now().plusDays(7));
+
+		mockMvc.perform(get("/api/publico/turmas/{token}/aula-ativa", turmaAtiva.getTokenCadastro()))
+				.andExpect(status().isNotFound());
+	}
+
+	@Test
+	void deveRetornar404QuandoTurmaInexistenteAoDefinirAgenda() throws Exception {
+		UUID turmaInexistente = UUID.randomUUID();
+		UUID tipoAula1 = obterTipoAulaPorNumero(1);
+
+		mockMvc.perform(put("/api/turmas/{turmaId}/agenda", turmaInexistente)
 				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
-						{"numero": 1, "data": "2026-07-02", "janelaAbertura": "2026-07-02T19:00:00", "janelaFechamento": "2026-07-02T21:00:00"}
-						"""))
+						{"itens": [{"tipoAulaId": "%s", "data": "2026-01-06"}]}
+						""".formatted(tipoAula1)))
 				.andExpect(status().isNotFound());
 	}
 
 	@Test
 	void deveRetornar409QuandoTurmaEncerrada() throws Exception {
 		Turma turmaEncerrada = criarTurma(StatusTurma.ENCERRADA);
+		UUID tipoAula1 = obterTipoAulaPorNumero(1);
 
-		mockMvc.perform(post("/api/turmas/{turmaId}/aulas", turmaEncerrada.getId())
+		mockMvc.perform(put("/api/turmas/{turmaId}/agenda", turmaEncerrada.getId())
 				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
-						{"numero": 1, "data": "2026-07-02", "janelaAbertura": "2026-07-02T19:00:00", "janelaFechamento": "2026-07-02T21:00:00"}
-						"""))
+						{"itens": [{"tipoAulaId": "%s", "data": "2026-01-06"}]}
+						""".formatted(tipoAula1)))
 				.andExpect(status().isConflict());
 	}
 
 	@Test
-	void deveRetornar400QuandoJanelaFechamentoNaoPosteriorAAbertura() throws Exception {
-		mockMvc.perform(post("/api/turmas/{turmaId}/aulas", turmaAtiva.getId())
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin)
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{"numero": 1, "data": "2026-07-02", "janelaAbertura": "2026-07-02T21:00:00", "janelaFechamento": "2026-07-02T19:00:00"}
-						"""))
-				.andExpect(status().isBadRequest());
-	}
-
-	@Test
-	void deveListarAulasDaTurma() throws Exception {
-		criarAula(turmaAtiva.getId());
+	void deveListarAulasDaTurmaOrdenadasPeloCatalogo() throws Exception {
+		UUID tipoAula2 = obterTipoAulaPorNumero(2);
+		UUID tipoAula1 = obterTipoAulaPorNumero(1);
+		definirAgenda(turmaAtiva.getId(), tipoAula2, LocalDate.now().plusDays(14));
+		definirAgenda(turmaAtiva.getId(), tipoAula1, LocalDate.now().plusDays(7));
 
 		mockMvc.perform(get("/api/turmas/{turmaId}/aulas", turmaAtiva.getId())
 				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$", hasSize(1)));
+				.andExpect(jsonPath("$", hasSize(2)))
+				.andExpect(jsonPath("$[0].numero").value(1))
+				.andExpect(jsonPath("$[1].numero").value(2));
 	}
 
-	@Test
-	void deveGerarImagemPngDoQrCode() throws Exception {
-		String aulaId = criarAula(turmaAtiva.getId());
-
-		mockMvc.perform(get("/api/aulas/{id}/qrcode", aulaId)
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin))
-				.andExpect(status().isOk())
-				.andExpect(header().string(HttpHeaders.CONTENT_TYPE, MediaType.IMAGE_PNG_VALUE));
-	}
-
-	private String criarAula(UUID turmaId) throws Exception {
-		var resultado = mockMvc.perform(post("/api/turmas/{turmaId}/aulas", turmaId)
+	private void definirAgenda(UUID turmaId, UUID tipoAulaId, LocalDate data) throws Exception {
+		mockMvc.perform(put("/api/turmas/{turmaId}/agenda", turmaId)
 				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
-						{"numero": 1, "data": "2026-07-02", "janelaAbertura": "2026-07-02T19:00:00", "janelaFechamento": "2026-07-02T21:00:00"}
-						"""))
-				.andReturn();
-		return objectMapper.readTree(resultado.getResponse().getContentAsString()).get("id").asText();
+						{"itens": [{"tipoAulaId": "%s", "data": "%s"}]}
+						""".formatted(tipoAulaId, data)));
 	}
 
 	private Turma criarTurma(StatusTurma status) {
-		Curso curso = new Curso();
-		curso.setNome("Escola de Hombridade " + status + System.nanoTime());
-		curso.setAtivo(true);
-		cursoRepository.save(curso);
+		Curso curso = cursoRepository.findById(obterCursoEscolaHombridade()).orElseThrow();
 
 		Turma turma = new Turma();
 		turma.setCurso(curso);
-		turma.setNome("Campus 85 - Turma 13");
+		turma.setNome("Campus 85 - Turma 13 - " + System.nanoTime());
 		turma.setTokenCadastro("TK" + System.nanoTime() % 1_000_000);
 		turma.setStatus(status);
 		return turmaRepository.save(turma);

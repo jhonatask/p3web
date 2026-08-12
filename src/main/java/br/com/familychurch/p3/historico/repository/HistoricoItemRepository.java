@@ -4,6 +4,7 @@ import br.com.familychurch.p3.historico.HistoricoItem;
 import br.com.familychurch.p3.historico.OrigemHistorico;
 import br.com.familychurch.p3.historico.TipoHistorico;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -13,5 +14,7 @@ public interface HistoricoItemRepository extends JpaRepository<HistoricoItem, UU
 
 	boolean existsByParticipanteIdAndItemAndTipoAndOrigem(
 			UUID participanteId, String item, TipoHistorico tipo, OrigemHistorico origem);
+
+	Optional<HistoricoItem> findByParticipanteIdAndItemAndTipo(UUID participanteId, String item, TipoHistorico tipo);
 
 }

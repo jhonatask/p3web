@@ -9,7 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface AvaliacaoRepository extends JpaRepository<Avaliacao, UUID> {
 
-	boolean existsByAlunoIdAndAulaId(UUID alunoId, UUID aulaId);
+	boolean existsByParticipanteIdAndAulaId(UUID participanteId, UUID aulaId);
 
 	List<Avaliacao> findByAulaId(UUID aulaId);
 

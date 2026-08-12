@@ -14,7 +14,6 @@ import br.com.familychurch.p3.aula.repository.AulaRepository;
 import br.com.familychurch.p3.avaliacao.repository.AvaliacaoRepository;
 import br.com.familychurch.p3.curso.Curso;
 import br.com.familychurch.p3.curso.repository.CursoRepository;
-import br.com.familychurch.p3.interesse.repository.InteresseRepository;
 import br.com.familychurch.p3.presenca.repository.PresencaRepository;
 import br.com.familychurch.p3.turma.repository.TurmaRepository;
 import java.util.UUID;
@@ -48,26 +47,21 @@ class TurmaControllerIT extends IntegrationTestSupport {
 	@Autowired
 	private AvaliacaoRepository avaliacaoRepository;
 
-	@Autowired
-	private InteresseRepository interesseRepository;
-
 	private String tokenAdmin;
 
 	@BeforeEach
 	void configurarCenario() throws Exception {
 		avaliacaoRepository.deleteAll();
-		interesseRepository.deleteAll();
 		presencaRepository.deleteAll();
 		aulaRepository.deleteAll();
 		alunoRepository.deleteAll();
 		turmaRepository.deleteAll();
-		cursoRepository.deleteAll();
 		tokenAdmin = obterTokenAdmin();
 	}
 
 	@Test
 	void deveCriarTurmaVinculadaACursoAtivoComTokenUnico() throws Exception {
-		UUID cursoId = criarCursoAtivo("Escola de Hombridade");
+		UUID cursoId = obterCursoEscolaHombridade();
 
 		mockMvc.perform(post("/api/turmas")
 				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin)
@@ -112,7 +106,7 @@ class TurmaControllerIT extends IntegrationTestSupport {
 
 	@Test
 	void deveListarTurmasComFiltroDeStatus() throws Exception {
-		UUID cursoId = criarCursoAtivo("Escola de Hombridade");
+		UUID cursoId = obterCursoEscolaHombridade();
 		String idTurmaEncerrada = criarTurma(cursoId, "Turma a encerrar");
 		criarTurma(cursoId, "Turma ativa");
 		mockMvc.perform(patch("/api/turmas/{id}/encerrar", idTurmaEncerrada)
@@ -127,7 +121,7 @@ class TurmaControllerIT extends IntegrationTestSupport {
 
 	@Test
 	void deveEncerrarTurma() throws Exception {
-		UUID cursoId = criarCursoAtivo("Escola de Hombridade");
+		UUID cursoId = obterCursoEscolaHombridade();
 		String turmaId = criarTurma(cursoId, "Turma a encerrar");
 
 		mockMvc.perform(patch("/api/turmas/{id}/encerrar", turmaId)
@@ -138,7 +132,7 @@ class TurmaControllerIT extends IntegrationTestSupport {
 
 	@Test
 	void deveObterDashboardDeTurmaSemAulas() throws Exception {
-		UUID cursoId = criarCursoAtivo("Escola de Hombridade");
+		UUID cursoId = obterCursoEscolaHombridade();
 		String turmaId = criarTurma(cursoId, "Turma sem aulas");
 
 		mockMvc.perform(get("/api/turmas/{turmaId}/dashboard", turmaId)

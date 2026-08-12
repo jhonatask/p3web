@@ -5,8 +5,8 @@ import java.util.UUID;
 
 public class PresencaDuplicadaException extends ConflictException {
 
-	public PresencaDuplicadaException(UUID alunoId, UUID aulaId) {
-		super("Aluno '%s' ja possui presenca registrada na aula '%s'".formatted(alunoId, aulaId));
+	public PresencaDuplicadaException(UUID participanteId, UUID aulaId) {
+		super("Participante '%s' ja possui presenca registrada na aula '%s'".formatted(participanteId, aulaId));
 	}
 
 }
