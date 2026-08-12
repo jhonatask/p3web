@@ -50,4 +50,10 @@ public class AulaController {
 				.orElseGet(() -> ResponseEntity.noContent().build());
 	}
 
+	@PatchMapping("/api/turmas/{turmaId}/agenda/atual/desativar")
+	public ResponseEntity<Void> desativarAulaAtual(@PathVariable UUID turmaId) {
+		aulaService.desativarAulaAtual(turmaId);
+		return ResponseEntity.noContent().build();
+	}
+
 }

@@ -28,4 +28,13 @@ public interface AulaService {
 	 */
 	Optional<AulaResponse> encerrarAulaAtual(UUID turmaId);
 
+	/**
+	 * Desativa a(s) aula(s) ATIVA(s) sem abrir a proxima - diferente de
+	 * {@link #encerrarAulaAtual(UUID)}, que sempre avanca. Fica sem nenhuma
+	 * aula ativa ate o lider definir/abrir outra data ou avancar
+	 * manualmente. Lanca NenhumaAulaAtivaException se nao havia nenhuma
+	 * aula ativa pra desativar.
+	 */
+	void desativarAulaAtual(UUID turmaId);
+
 }

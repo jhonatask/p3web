@@ -2,6 +2,7 @@ package br.com.familychurch.p3.aula.controller;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -143,6 +144,34 @@ class AulaControllerIT extends IntegrationTestSupport {
 				.andExpect(jsonPath("$", hasSize(2)))
 				.andExpect(jsonPath("$[0].numero").value(1))
 				.andExpect(jsonPath("$[1].numero").value(2));
+	}
+
+	@Test
+	void deveDesativarAulaAtivaSemAbrirProxima() throws Exception {
+		UUID tipoAula1 = obterTipoAulaPorNumero(1);
+		UUID tipoAula2 = obterTipoAulaPorNumero(2);
+		definirAgenda(turmaAtiva.getId(), tipoAula1, LocalDate.now());
+		definirAgenda(turmaAtiva.getId(), tipoAula2, LocalDate.now().plusDays(7));
+
+		mockMvc.perform(patch("/api/turmas/{turmaId}/agenda/atual/desativar", turmaAtiva.getId())
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin))
+				.andExpect(status().isNoContent());
+
+		mockMvc.perform(get("/api/publico/turmas/{token}/aula-ativa", turmaAtiva.getTokenCadastro()))
+				.andExpect(status().isNotFound());
+
+		mockMvc.perform(get("/api/turmas/{turmaId}/aulas", turmaAtiva.getId())
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$[0].status").value("ENCERRADA"))
+				.andExpect(jsonPath("$[1].status").value("AGENDADA"));
+	}
+
+	@Test
+	void deveRetornar404AoDesativarQuandoNenhumaAulaAtiva() throws Exception {
+		mockMvc.perform(patch("/api/turmas/{turmaId}/agenda/atual/desativar", turmaAtiva.getId())
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin))
+				.andExpect(status().isNotFound());
 	}
 
 	private void definirAgenda(UUID turmaId, UUID tipoAulaId, LocalDate data) throws Exception {

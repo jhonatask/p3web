@@ -125,6 +125,19 @@ public class AulaServiceImpl implements AulaService {
 	}
 
 	@Override
+	public void desativarAulaAtual(UUID turmaId) {
+		sincronizarStatusPorData(turmaId);
+		List<Aula> ativas = aulaRepository.findByTurmaIdAndStatusOrderByTipoAulaOrdemAsc(turmaId, StatusAula.ATIVA);
+		if (ativas.isEmpty()) {
+			throw new NenhumaAulaAtivaException(turmaId);
+		}
+		for (Aula ativa : ativas) {
+			ativa.setStatus(StatusAula.ENCERRADA);
+			ativa.setEncerradaManualmente(true);
+		}
+	}
+
+	@Override
 	public void sincronizarStatusPorData(UUID turmaId) {
 		LocalDate hoje = LocalDate.now();
 		for (Aula aula : aulaRepository.findByTurmaId(turmaId)) {
