@@ -6,7 +6,7 @@ import java.util.UUID;
 public class AulaNaoEncontradaException extends NotFoundException {
 
 	public AulaNaoEncontradaException(UUID id) {
-		super("Aula nao encontrada para o id '%s'".formatted(id));
+		super("Esta aula nao foi encontrada.");
 	}
 
 }

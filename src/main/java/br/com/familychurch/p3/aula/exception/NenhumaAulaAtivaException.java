@@ -6,7 +6,7 @@ import java.util.UUID;
 public class NenhumaAulaAtivaException extends NotFoundException {
 
 	public NenhumaAulaAtivaException(UUID turmaId) {
-		super("Nenhuma aula esta ativa hoje na turma '%s'".formatted(turmaId));
+		super("Nenhuma aula esta ativa nesta turma no momento.");
 	}
 
 }
