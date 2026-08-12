@@ -1,4 +1,4 @@
-package br.com.familychurch.p3.aluno.validation;
+package br.com.familychurch.p3.common.validation;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;

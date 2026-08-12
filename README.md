@@ -1,10 +1,28 @@
-# chamada-backend
+# Plataforma P3
 
-API de controle de presenca (chamada) da Escola de Hombridade.
+Backend da **Plataforma P3**: um monolito modular unico, organizado por
+pacotes de dominio, que nasceu como a API de controle de presenca (chamada)
+da Escola de Hombridade e esta evoluindo para ser a base de todos os
+ministerios da Family que giram em torno de um cadastro unico por CPF
+(Escola de Hombridade, Homem ao Maximo, Primeiros Passos, Servos, GCs de
+Homens — ver "Participante e Historico" abaixo). O nome do repositorio ficou
+o mesmo por continuidade historica, mas o escopo ja e maior que "chamada".
 
-A documentacao de arquitetura e modelo de dados completo esta em
-`../parte-tecnica-app-chamada.md` (um nivel acima deste diretorio). Este README
-cobre apenas o setup e as convencoes deste repositorio backend.
+A decisao de arquitetura, o modelo de dados unificado e o roadmap dos
+proximos modulos estao documentados em
+`../relatorio_arquitetura_plataforma_p3.pdf`, a partir dos mapas de execucao
+de produto em `../proposta/`. A documentacao de arquitetura e modelo de
+dados especifico da Escola de Hombridade (o primeiro modulo, ja
+implementado) esta em `../parte-tecnica-app-chamada.md`, um nivel acima
+deste diretorio. Este README cobre o setup e as convencoes deste
+repositorio backend — inclui, alem da Escola de Hombridade, a base de
+cadastro `Participante`/`HistoricoItem` compartilhada pelos futuros modulos.
+
+Regra central que atravessa todo o backend: **nenhum modulo tem coluna
+propria de nome/CPF/celular** — todos referenciam `Participante` (a
+entidade "Pessoa" do relatorio de arquitetura) e so gravam o que e seu
+(matricula, presenca, conclusao, papel). CPF ja cadastrado **atualiza**,
+nunca duplica.
 
 ## Stack
 
@@ -161,12 +179,17 @@ preveni-las.
 O container Postgres e um campo `static` em `IntegrationTestSupport`,
 iniciado uma unica vez em um bloco `static { }` e reutilizado por **todas** as
 classes de teste de integracao que estendem essa classe base (`CursoControllerIT`,
-`TurmaControllerIT`, `AlunoControllerIT`, `AuthControllerIT`,
-`P3ApplicationTests`) — pratica comum do Testcontainers ("singleton
-container") para nao pagar o custo de subir um container Postgres novo a cada
-classe de teste, o que deixaria a suite lenta. Cada classe ainda limpa os
-dados que criou (via `deleteAll()` nos repositorios, respeitando a ordem das
-foreign keys: aluno -> turma -> curso) em um `@BeforeEach`, garantindo
+`TurmaControllerIT`, `AlunoControllerIT`, `AuthControllerIT`, `AulaControllerIT`,
+`PresencaControllerIT`, `AvaliacaoControllerIT`, `InteresseControllerIT`,
+`ParticipanteControllerIT`, `P3ApplicationTests`) — pratica comum do
+Testcontainers ("singleton container") para nao pagar o custo de subir um
+container Postgres novo a cada classe de teste, o que deixaria a suite lenta.
+Cada classe ainda limpa os dados que criou (via `deleteAll()` nos
+repositorios, respeitando a ordem das foreign keys — hoje `aluno` tambem
+depende de `participante`, entao `ParticipanteControllerIT` precisa limpar
+`avaliacao`/`interesse`/`presenca`/`aula`/`aluno` antes de `participante`,
+mesmo sem criar esses registros diretamente, porque outras classes do mesmo
+container podem ter deixado linhas para tras) em um `@BeforeEach`, garantindo
 isolamento entre os testes mesmo com o banco compartilhado.
 
 ### Testes de integracao (`*IT`) rodando junto com `mvn test`
@@ -313,12 +336,134 @@ essa validacao nao existe do lado de `curso`.
 padrao de `CursoNaoEncontradoException`: usada quando a propria `Turma`
 buscada por id nao existe.
 
+## Participante e Historico (cadastro base multi-ministerio)
+
+`Participante` (`br.com.familychurch.p3.participante`) e a base de cadastro
+**unica por CPF**, compartilhada por todos os ministerios da Family — nao
+presa a uma turma/curso especifico como `Aluno`. Guarda identidade, endereco
+(geocodificado) e os dados de "vida na Family"/comunhao. E o equivalente,
+neste repositorio, ao que o relatorio de arquitetura da Plataforma P3 chamava
+de `Pessoa`: a entidade central da qual `Aluno` (ver secao seguinte) passa a
+ser so um registro de matricula.
+
+```
+POST /api/publico/participantes    (permitAll, cadastro publico via link)
+GET  /api/participantes/{cpf}      (exige JWT — lideranca consulta o perfil completo)
+```
+
+Segue a mesma estrutura de pacotes das demais features
+(`.controller`, `.service`, `.repository`, `.dto`, `.exception`).
+
+### Apenas nome/cpf sao obrigatorios no banco
+
+O cadastro de `Aluno` (ver abaixo) tambem cria/reaproveita um `Participante`,
+mas so coleta nome/cpf/celular — nao o formulario completo (data de
+nascimento, endereco, vida na Family etc). Por isso, no banco, **so `nome` e
+`cpf` sao `NOT NULL`**; todos os demais campos ficam nullable. A
+obrigatoriedade descrita no documento de produto do cadastro base e aplicada
+via Bean Validation em `ParticipanteCadastroRequest`, camada de aplicacao —
+nao como constraint de schema.
+
+### Endereco embutido (`@Embeddable`) e geocoding atras de interface
+
+`Endereco` e um `@Embeddable` dentro da propria tabela `participante` (relacao
+1:1 real, sem necessidade de join). `latitude`/`longitude` nunca sao aceitos
+do cliente — sao calculados no servidor a partir do endereco completo, via
+`GeocodingService` (`participante.service`). Hoje so existe
+`GeocodingServiceStub`, que sempre retorna vazio (cadastro salva normalmente,
+sem coordenadas) porque ainda nao ha chave do Google Geocoding disponivel;
+trocar para uma implementacao real (HTTP via `RestClient`, ja disponivel via
+`spring-boot-starter-webmvc`) e questao de adicionar um novo `@Service` que
+implemente a mesma interface, sem tocar em `ParticipanteServiceImpl`. O
+preenchimento do endereco a partir do CEP (ViaCEP) e responsabilidade do
+formulario (fora deste repositorio) — o backend so recebe os campos ja
+resolvidos.
+
+**Cuidado ao ler `participante.getEndereco()` de uma entidade carregada do
+banco:** o Hibernate materializa um `@Embedded` como `null` (nao como uma
+instancia com todos os campos `null`) quando **todas** as colunas mapeadas
+estao `null` — exatamente o caso de um `Participante` minimo criado pelo
+fluxo de `Aluno`. `ParticipanteServiceImpl` sempre atribui uma nova instancia
+de `Endereco` em vez de reaproveitar a existente, e `ParticipanteResponse`
+trata esse campo como opcional na resposta.
+
+### Upsert por CPF, nunca duplica
+
+`ParticipanteServiceImpl.cadastrar` busca por CPF primeiro: se ja existe,
+**atualiza** todos os campos do perfil com os valores enviados (reenviar o
+mesmo CPF corrige/completa o cadastro, nunca cria um segundo registro).
+
+### Historico de cursos/eventos (`br.com.familychurch.p3.historico`)
+
+As opcoes de multipla escolha do formulario ("Cursos realizados", "Eventos
+que participou", + os campos livres "Outros") **nao viram colunas** em
+`Participante`. Cada item marcado gera uma linha em `HistoricoItem`, ligada
+ao participante — assim, um curso novo (outra turma, outro ministerio) entra
+sem alterar o schema. Ao reenviar o mesmo cadastro, `HistoricoItemRepository`
+evita duplicar a mesma linha (`participante_id + item + tipo + origem`).
+
+A leitura pivotada por curso (visao "Nao iniciado / Em andamento /
+Concluido" por coluna, que o lider ve na consulta) e o gatilho automatico de
+conclusao via chamada de presenca sao explicitamente a proxima entrega
+("chamada") no documento de produto — nao implementados aqui.
+`GET /api/participantes/{cpf}` ja devolve a lista crua de `HistoricoItem` do
+participante, suficiente para "o lider ver o homem inteiro" nesta fase.
+
+### Validacoes condicionais no service, nao em anotacao
+
+`quantidadeFilhos` (exigido se `temFilhos=true`) e `quaisGcs` (exigido se
+`participaGc=true`) sao verificados imperativamente em
+`ParticipanteServiceImpl`, no mesmo espirito do
+`ConsentimentoLgpdObrigatorioException` ja usado em `Aluno` — Bean
+Validation puro nao expressa bem regras condicionais entre dois campos do
+mesmo request.
+
+### Cursos e eventos sao opcionais, apesar do mapa marcar como obrigatorio
+
+O mapa de execucao marca "Cursos realizados na Family" e "Eventos que
+participou na Family" como obrigatorios, mas isso nao reflete a realidade:
+quem esta se cadastrando pela primeira vez pode legitimamente nao ter feito
+nenhum curso nem participado de nenhum evento ainda. Por decisao explicita
+do usuario (ver historico do projeto), `cursosRealizados`/`cursosOutros` e
+`eventosParticipou`/`eventosOutros` sao tratados como totalmente opcionais
+no `ParticipanteServiceImpl` — nenhuma validacao exige selecao. `Set<String>`
+vazio ou `null` e aceito normalmente; `registrarHistorico` so grava o que
+foi de fato informado.
+
+### Consentimento LGPD com prova de aceite
+
+Assim como em `Aluno`, `Participante.consentimentoLgpd` +
+`consentimentoLgpdTimestamp` (migration `V14`) guardam a prova do aceite —
+`ParticipanteServiceImpl` grava `true` + `LocalDateTime.now()` no momento do
+cadastro/atualizacao, depois de `validarConsentimentoLgpd` confirmar que
+`aceiteLgpd=true` veio no request (400 caso contrario). Antes da `V14`, o
+request exigia o aceite mas nao guardava nenhuma prova dele em
+`Participante` — falha que so nao existia em `Aluno`.
+
+### Fora de escopo desta entrega
+
+Busca/roteamento por regiao (bairro) ate o GC ou curso mais proximo por
+distancia exigiria modelar `GC` como entidade propria, o que nao existe
+ainda — o documento de produto trata isso como parte de uma entrega futura.
+Esta entrega cobre o cadastro, o modelo de dados completo e a consulta por
+CPF.
+
 ## Aluno
 
 `Aluno` segue a mesma estrutura de pacotes de `Curso`/`Turma`
 (`br.com.familychurch.p3.aluno` com subpacotes `.controller`, `.service`,
-`.repository`, `.dto`, `.exception`), mais um subpacote `.validation` com o
-validador de CPF (ver abaixo).
+`.repository`, `.dto`, `.exception`). O validador de CPF (`@Cpf`/`CpfValidator`)
+foi movido para `br.com.familychurch.p3.common.validation` quando `Participante`
+passou a precisar dele tambem — `common` e o pacote documentado desde a Fase 1
+para utilitarios cross-cutting "quando a primeira necessidade real aparecer".
+
+`Aluno` **e uma matricula na Escola de Hombridade, nao a identidade da
+pessoa**: `nome`/`cpf`/`celular` vivem em `Participante` (ver secao acima),
+referenciado por `Aluno.participante` (`@ManyToOne`, FK `participante_id`,
+`unique`). `AlunoResponse`/`AlunoCadastroResponse` continuam expondo
+`nome`/`cpf`/`celular` no mesmo formato JSON de antes — apenas buscam os
+valores via `aluno.getParticipante()` por baixo, sem quebrar quem ja consome
+esses endpoints.
 
 ### Cadastro publico via link da turma
 
@@ -336,6 +481,13 @@ token. Para isso, o prefixo `/api/publico/**` foi liberado em
 `SecurityConfig` (`permitAll`, adicionado antes da regra geral de `/api/**`
 autenticado), sem alterar o restante da `SecurityFilterChain`.
 
+`AlunoServiceImpl.cadastrar` faz *find-or-create* em `Participante` por CPF
+antes de criar a matricula: se ja existe um `Participante` com esse CPF (por
+exemplo, criado antes pelo cadastro base completo), **reaproveita sem
+sobrescrever** nome/celular — evita que um cadastro simples de turma
+degrade um perfil ja mais completo. Se nao existe, cria um `Participante`
+minimo (nome/cpf/celular, resto vazio).
+
 A listagem de alunos de uma turma, por outro lado, e uso interno da
 lideranca e segue o padrao de autenticacao ja existente:
 
@@ -346,17 +498,22 @@ GET /api/turmas/{turmaId}/alunos   (exige JWT, como o restante de /api/**)
 Os dois endpoints ficam no mesmo `AlunoController`, mesmo com prefixos de URL
 diferentes, porque pertencem a mesma feature de dominio (`aluno`).
 
-### CPF unico globalmente, guardado em texto puro
+### Matricula unica por participante
 
 O modelo de dados tem `Aluno.turma_id` como FK simples para uma unica turma
-(um aluno pertence a uma turma so). Por isso a unicidade de CPF e **global**
-(`uk_aluno_cpf` na tabela, `AlunoRepository.existsByCpf`), nao apenas dentro
-da turma — o mesmo CPF nao pode se cadastrar em nenhuma turma se ja existe em
-outra.
+(um aluno pertence a uma turma so). Por isso a unicidade e **global por
+participante** (`uk_aluno_participante` na tabela, equivalente ao antigo
+`uk_aluno_cpf` — mesmo comportamento, so mudou onde a unicidade e verificada:
+`AlunoRepository.existsByParticipanteCpf` em vez de `existsByCpf`), nao
+apenas dentro da turma — o mesmo CPF nao pode se matricular em nenhuma turma
+se ja existe em outra.
+
+### CPF guardado em texto puro (em `Participante`)
 
 O documento tecnico (`../parte-tecnica-app-chamada.md`, secao 3, LGPD) sugere
 "considerar" guardar o CPF com hash ou criptografia. Essa tarefa optou por
-manter o CPF em **texto puro** no banco, decisao deliberada: a Fase 2 do
+manter o CPF (hoje em `Participante.cpf`) em **texto puro** no banco, decisao
+deliberada: a Fase 2 do
 roadmap (identificacao/check-in por CPF e busca manual do professor por CPF
 na marcacao de presenca) depende de buscar e exibir o CPF diretamente. Um
 hash impediria a busca por igualdade sem guardar o CPF em paralelo em outro
@@ -372,15 +529,17 @@ a coluna do lado da aplicacao.
 ### Validacao de CPF
 
 CPF nao e validado so por tamanho/regex. Existe uma anotacao Bean Validation
-customizada, `@Cpf` (`br.com.familychurch.p3.aluno.validation.Cpf` +
-`CpfValidator`), que implementa o algoritmo padrao de digito verificador do
-CPF brasileiro (modulo 11 sobre os 9 primeiros digitos, calculado duas
-vezes) e rejeita tambem os classicos CPFs com todos os digitos iguais (ex:
-`111.111.111-11`), que passam no calculo do modulo 11 mas sao invalidos na
-pratica. `AlunoCadastroRequest.cpf` usa `@Cpf` diretamente, entao um CPF
-invalido e rejeitado automaticamente pelo mecanismo padrao de `@Valid` (400),
-sem logica extra no controller. O CPF e persistido apenas com digitos (a
-mascara `xxx.xxx.xxx-xx`, se enviada, e normalizada antes de salvar).
+customizada, `@Cpf` (`br.com.familychurch.p3.common.validation.Cpf` +
+`CpfValidator` — pacote compartilhado, ver secao "Participante" acima), que
+implementa o algoritmo padrao de digito verificador do CPF brasileiro (modulo
+11 sobre os 9 primeiros digitos, calculado duas vezes) e rejeita tambem os
+classicos CPFs com todos os digitos iguais (ex: `111.111.111-11`), que passam
+no calculo do modulo 11 mas sao invalidos na pratica.
+`AlunoCadastroRequest.cpf`/`ParticipanteCadastroRequest.cpf` usam `@Cpf`
+diretamente, entao um CPF invalido e rejeitado automaticamente pelo mecanismo
+padrao de `@Valid` (400), sem logica extra no controller. O CPF e persistido
+apenas com digitos (a mascara `xxx.xxx.xxx-xx`, se enviada, e normalizada
+antes de salvar).
 
 ### Consentimento LGPD
 
@@ -416,6 +575,16 @@ e a primeira delas, seguida por `V3__create_usuario_admin_table.sql` e
 para a tabela de `Turma`, com FK para `curso` e constraint de unicidade em
 `token_cadastro`, e `V6__create_aluno_table.sql` para a tabela de `Aluno`, com
 FK para `turma` e constraint de unicidade global em `cpf`).
+`V11__create_participante_table.sql` e `V12__create_historico_item_table.sql`
+criam as tabelas do cadastro base (`participante`, `participante_gc`,
+`historico_item`; ver secao "Participante e Historico" acima).
+`V13__extrai_participante_de_aluno.sql` e a migration de dados que extrai
+`nome`/`cpf`/`celular` de `aluno` para `participante` (via
+`INSERT ... SELECT` + `UPDATE`, funciona com 0 ou N linhas existentes),
+adiciona `aluno.participante_id` e remove as colunas antigas — o refactor que
+transforma `Aluno` em matricula. `V14__add_consentimento_lgpd_participante.sql`
+adiciona `consentimento_lgpd`/`consentimento_lgpd_timestamp` em `participante`
+(ver secao "Consentimento LGPD com prova de aceite" acima).
 
 `spring.jpa.hibernate.ddl-auto` esta como `validate`: o schema e sempre gerenciado
 pelo Flyway, nunca gerado automaticamente pelo Hibernate.

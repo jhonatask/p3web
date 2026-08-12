@@ -1,4 +1,4 @@
-package br.com.familychurch.p3.aluno.validation;
+package br.com.familychurch.p3.common.validation;
 
 import jakarta.validation.Constraint;
 import jakarta.validation.Payload;

@@ -1,7 +1,7 @@
 {
 	"info": {
 		"name": "Chamada Backend - Escola de Hombridade",
-		"description": "Colecao dos endpoints do backend do app de controle de presenca. Rode as pastas em ordem (Auth -> Curso -> Turma -> Aluno -> Aula -> Presenca -> Avaliacao -> Interesse -> Dashboard) para encadear as variaveis automaticamente (token, cursoId, turmaId, tokenCadastroTurma, aulaId, qrToken). Avaliacao/Interesse exigem que o Check-in por QR Code (pasta Presenca) tenha sido feito antes, com o mesmo CPF.",
+		"description": "Colecao dos endpoints do backend do app de controle de presenca. Rode as pastas em ordem (Auth -> Curso -> Turma -> Participante -> Aluno -> Aula -> Presenca -> Avaliacao -> Interesse -> Dashboard) para encadear as variaveis automaticamente (token, cursoId, turmaId, tokenCadastroTurma, aulaId, qrToken). Avaliacao/Interesse exigem que o Check-in por QR Code (pasta Presenca) tenha sido feito antes, com o mesmo CPF. Participante e a base de cadastro unica por CPF, independente de turma/curso - Aluno referencia um Participante por baixo.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
@@ -175,6 +175,33 @@
 						"method": "PATCH",
 						"header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
 						"url": { "raw": "{{baseUrl}}/api/turmas/{{turmaId}}/encerrar", "host": [ "{{baseUrl}}" ], "path": [ "api", "turmas", "{{turmaId}}", "encerrar" ] }
+					}
+				}
+			]
+		},
+		{
+			"name": "Participante",
+			"item": [
+				{
+					"name": "Cadastro Publico de Participante",
+					"request": {
+						"method": "POST",
+						"header": [ { "key": "Content-Type", "value": "application/json" } ],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nome\": \"Joao da Silva\",\n  \"cpf\": \"529.982.247-25\",\n  \"dataNascimento\": \"1990-05-20\",\n  \"estadoCivil\": \"SOLTEIRO\",\n  \"temFilhos\": true,\n  \"quantidadeFilhos\": 2,\n  \"cep\": \"74000-000\",\n  \"rua\": \"Rua das Flores\",\n  \"numero\": \"123\",\n  \"complemento\": \"\",\n  \"bairro\": \"Centro\",\n  \"cidade\": \"Goiania\",\n  \"uf\": \"GO\",\n  \"pontoReferencia\": \"\",\n  \"tempoNaFamily\": \"MAIS_DE_3_ANOS\",\n  \"batizado\": true,\n  \"serveMinisterio\": false,\n  \"qualMinisterioServe\": \"\",\n  \"instagram\": \"@joaosilva\",\n  \"facebook\": \"\",\n  \"cursosRealizados\": [\"Hombridade\"],\n  \"cursosOutros\": \"\",\n  \"eventosParticipou\": [\"Awake\"],\n  \"eventosOutros\": \"\",\n  \"participaGc\": true,\n  \"quaisGcs\": [\"GC de Homens\"],\n  \"aceiteLgpd\": true\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/api/publico/participantes", "host": [ "{{baseUrl}}" ], "path": [ "api", "publico", "participantes" ] },
+						"description": "Rota publica, sem Authorization. Cadastro base unico por CPF, reaproveitado por todos os ministerios. Reenviar o mesmo CPF atualiza o cadastro existente em vez de duplicar. latitude/longitude sao calculados no servidor (Geocoding) e nunca aceitos aqui."
+					}
+				},
+				{
+					"name": "Consultar Participante por CPF",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+						"url": { "raw": "{{baseUrl}}/api/participantes/52998224725", "host": [ "{{baseUrl}}" ], "path": [ "api", "participantes", "52998224725" ] },
+						"description": "Exige Authorization. Devolve o perfil completo (identidade, endereco, vida na Family, comunhao) mais o historico de cursos/eventos do participante."
 					}
 				}
 			]
