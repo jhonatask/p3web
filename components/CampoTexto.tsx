@@ -3,6 +3,7 @@ type CampoTextoProps = {
   label: string;
   valor: string;
   onChange: (valor: string) => void;
+  onBlur?: () => void;
   erro?: string;
   tipo?: string;
   autoComplete?: string;
@@ -15,6 +16,7 @@ export default function CampoTexto({
   label,
   valor,
   onChange,
+  onBlur,
   erro,
   tipo = "text",
   autoComplete,
@@ -33,6 +35,7 @@ export default function CampoTexto({
         type={tipo}
         value={valor}
         onChange={(evento) => onChange(evento.target.value)}
+        onBlur={onBlur}
         autoComplete={autoComplete}
         placeholder={placeholder}
         inputMode={inputMode}

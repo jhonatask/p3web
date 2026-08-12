@@ -11,6 +11,14 @@ export function mascararCpf(valor: string): string {
   return resultado;
 }
 
+export function mascararCep(valor: string): string {
+  const digitos = somenteDigitos(valor).slice(0, 8);
+  if (digitos.length <= 5) {
+    return digitos;
+  }
+  return `${digitos.slice(0, 5)}-${digitos.slice(5)}`;
+}
+
 export function mascararCelular(valor: string): string {
   const digitos = somenteDigitos(valor).slice(0, 11);
 

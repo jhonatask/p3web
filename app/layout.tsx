@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Cadastro P3",
-  description: "Portal de cadastro público de alunos para controle de presença.",
+  title: "P3",
+  description: "Cadastro, chamada e área do líder da Plataforma P3.",
 };
 
 export default function RootLayout({

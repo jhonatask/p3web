@@ -1,11 +1,11 @@
-# Cadastro P3 — página pública de cadastro de aluno
+# p3web — frontend público da Plataforma P3
 
-Página web pública (Next.js) onde o aluno se cadastra numa turma a partir do link único gerado pelo
-backend (`app.com/cadastro/{token}`). Não exige instalar nenhum app — o aluno abre o link no celular,
-preenche os dados uma única vez e pronto.
+Frontend público (Next.js) da **Plataforma P3** (cadastro único por CPF, compartilhado por vários
+módulos/ministérios — ver `../relatorio_arquitetura_plataforma_p3.pdf` e os mapas em `../proposta/`).
+Este projeto se chamava `cadastro-web`; foi renomeado para `p3web` porque deixou de ser só a tela de
+cadastro — agora também é a chamada da Escola de Hombridade, e vai ganhar a área logada do líder.
 
-Este projeto nasceu para a Escola de Hombridade, mas é genérico o suficiente para servir outros
-cursos/programas da igreja, já que a turma e o curso vêm dinamicamente do backend.
+Nenhuma das rotas exige instalar app: o homem abre o link no celular e resolve tudo pelo navegador.
 
 ## Como rodar
 
@@ -14,11 +14,7 @@ npm install
 npm run dev
 ```
 
-Acesse `http://localhost:3000`. A rota principal é `/cadastro/[token]`, por exemplo:
-
-```
-http://localhost:3000/cadastro/ABC12345
-```
+Acesse `http://localhost:3000`.
 
 ## Variável de ambiente
 
@@ -30,31 +26,44 @@ NEXT_PUBLIC_API_URL=http://localhost:8080
 
 Todas as chamadas ao backend usam essa variável (nunca há URL de backend hardcoded no código).
 
-## Rota principal
+## Rotas
 
-`app/cadastro/[token]/page.tsx` — fluxo:
+### `/cadastro-base` — cadastro único por CPF (Entrega 1)
 
-1. Busca `GET /api/publico/turmas/{token}` no servidor (Server Component).
-   - Token inexistente (404) → tela de link inválido.
-   - Turma encerrada (409) → tela informando que o cadastro não está mais disponível, com a mensagem
-     vinda do backend.
-   - Sucesso (200) → mostra o cabeçalho com curso/turma e o formulário de cadastro.
-2. O formulário (`components/FormularioCadastro.tsx`) valida nome, CPF (algoritmo real de dígito
-   verificador, em `lib/cpf.ts`), celular e campus no client antes de enviar, e exige o checkbox de
-   consentimento LGPD marcado (vem desmarcado por padrão) para habilitar o botão de envio.
-3. Ao enviar, chama `POST /api/publico/turmas/{token}/alunos`. Erros de validação de campo (400 com
-   `erros`) são exibidos ao lado do campo correspondente; erros de regra de negócio (CPF duplicado,
-   turma encerrada) aparecem como alerta geral no topo do formulário, sem apagar o que já foi
-   preenchido. Sucesso (201) mostra a tela de confirmação de cadastro.
+Link único e permanente. Formulário completo (identidade, endereço, vida na Family, história de
+cursos/eventos, comunhão). Ao enviar, chama `POST /api/publico/participantes` — se o CPF já existir na
+base, atualiza o cadastro existente em vez de duplicar.
+
+### `/chamada/[token]` — chamada da Escola de Hombridade (Entrega 2)
+
+Link exclusivo por turma. Fluxo:
+
+1. Busca `GET /api/publico/turmas/{token}` e `GET /api/publico/turmas/{token}/aula-ativa` no servidor.
+   - Token inexistente (404) → link inválido. Turma encerrada (409) → aviso. Sem aula ativa hoje (404) →
+     aviso — a aula do dia é decidida pela agenda da turma, o aluno nunca escolhe.
+2. O aluno informa o CPF (`components/FormularioCpfChamada.tsx`), que chama
+   `POST /api/publico/turmas/{token}/chamada`.
+   - CPF já cadastrado → presença registrada na hora, mostra "Olá, Fulano" e vai direto para a
+     avaliação da aula.
+   - CPF sem cadastro (404) → abre o formulário completo do cadastro base
+     (`components/CadastroBaseCliente.tsx`, reaproveitado, com o CPF já preenchido) antes de liberar a
+     avaliação. A chamada nunca recadastra quem já tem cadastro — só localiza pelo CPF.
+3. Avaliação da aula (`components/FormularioAvaliacao.tsx`): nota (0–10), didática, sugestão, NPS
+   (0–10) — sempre. Nas aulas 03/06/09 (3ª aula de cada módulo), aparecem também "deseja servir?" e "o
+   que você sabe fazer?", que fazem write-back direto na base do homem pelo CPF.
 
 ## Estrutura
 
 - `lib/api.ts` — chamadas HTTP ao backend e tipos de request/response.
 - `lib/cpf.ts` — validação de CPF (dígito verificador via módulo 11 + rejeição de dígitos repetidos).
-- `lib/masks.ts` — máscaras de digitação de CPF e celular.
+- `lib/masks.ts` — máscaras de digitação de CPF, CEP e celular.
 - `lib/texto.ts` — utilitário compartilhado de normalização de texto.
-- `components/` — componentes de UI (formulário, telas de erro/sucesso, cartão de página).
-- `app/cadastro/[token]/page.tsx` — rota pública de cadastro.
+- `lib/viacep.ts` — auto-preenchimento de endereço a partir do CEP.
+- `components/Campo*.tsx` — campos de formulário reaproveitáveis (texto, textarea, escala 0–10,
+  seleção única, múltipla escolha, sim/não).
+- `components/CartaoPagina.tsx` — moldura visual comum a todas as páginas.
+- `app/cadastro-base/` — rota do cadastro único.
+- `app/chamada/[token]/` — rota da chamada por turma.
 
 ## Testando de ponta a ponta
 
@@ -66,7 +75,8 @@ docker compose up -d
 ./mvnw.cmd spring-boot:run
 ```
 
-Depois, crie uma turma de teste (login, curso, turma) usando a collection Postman
-`../backend/postman/chamada-backend.postman_collection.json` (pastas Auth → Curso → Turma, nessa
-ordem) para obter um `tokenCadastro` válido. Acesse
-`http://localhost:3000/cadastro/{tokenCadastro}` para ver o formulário real.
+Depois, use a collection Postman `../backend/postman/chamada-backend.postman_collection.json` (ou
+`curl`) para: logar como admin, criar/achar o curso "Escola de Hombridade", criar uma turma, e definir a
+agenda de pelo menos uma aula com `data` de hoje (`PUT /api/turmas/{turmaId}/agenda`) para que
+`/api/publico/turmas/{token}/aula-ativa` responda. Acesse `http://localhost:3000/chamada/{tokenCadastro}`
+para ver o fluxo real.
