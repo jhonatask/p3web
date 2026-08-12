@@ -287,12 +287,15 @@ turma concreta (ex: "Campus 85 - Turma 13"). Segue a mesma estrutura de
 pacotes de `Curso` (`br.com.familychurch.p3.turma` com subpacotes
 `.controller`, `.service`, `.repository`, `.dto`, `.exception`).
 
-### Link unico de cadastro
+### Link unico da chamada
 
 Toda `Turma` recebe, na criacao, um `tokenCadastro` unico usado para montar o
 link publico que a lideranca compartilha com os alunos (ex:
-`app.com/cadastro/<token>`, que sera consumido pelo futuro endpoint de
-cadastro publico de `Aluno`).
+`http://localhost:3000/chamada/<token>` em dev). O nome do campo
+(`tokenCadastro`/`linkCadastro`) e uma sobra do desenho original (cadastro de
+`Aluno` por turma) - a partir da Fase A da chamada, esse mesmo link passou a
+apontar para o fluxo de chamada (`/chamada/[token]` no frontend), nao mais
+para um cadastro por turma.
 
 O token e uma string curta de 8 caracteres alfanumericos (alfabeto reduzido,
 sem caracteres ambiguos como `0`/`O` e `1`/`I`/`L`), gerada com
@@ -305,9 +308,10 @@ proporcional (o token nao e segredo criptografico, apenas precisa ser dificil
 de adivinhar e unico).
 
 `TurmaResponse` expõe tanto o `tokenCadastro` isolado quanto o `linkCadastro`
-ja montado (token + base URL configurada em `app.cadastro.base-url`, sobre
-escrevivel por `CADASTRO_BASE_URL`), para o front-end escolher o formato mais
-conveniente sem precisar remontar a URL.
+ja montado (token + base URL configurada em `app.chamada.base-url`,
+sobrescrevivel por `CHAMADA_BASE_URL`, default `http://localhost:3000/chamada`
+para bater com a porta padrao do `p3web` em dev), para o front-end escolher o
+formato mais conveniente sem precisar remontar a URL.
 
 ### Modulo atual
 

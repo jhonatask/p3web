@@ -51,19 +51,19 @@ public class TurmaServiceImpl implements TurmaService {
 	private final PresencaRepository presencaRepository;
 	private final AlunoRepository alunoRepository;
 	private final AvaliacaoRepository avaliacaoRepository;
-	private final String baseUrlCadastro;
+	private final String baseUrlChamada;
 	private final SecureRandom secureRandom = new SecureRandom();
 
 	public TurmaServiceImpl(TurmaRepository turmaRepository, CursoRepository cursoRepository,
 			AulaRepository aulaRepository, PresencaRepository presencaRepository, AlunoRepository alunoRepository,
-			AvaliacaoRepository avaliacaoRepository, @Value("${app.cadastro.base-url}") String baseUrlCadastro) {
+			AvaliacaoRepository avaliacaoRepository, @Value("${app.chamada.base-url}") String baseUrlChamada) {
 		this.turmaRepository = turmaRepository;
 		this.cursoRepository = cursoRepository;
 		this.aulaRepository = aulaRepository;
 		this.presencaRepository = presencaRepository;
 		this.alunoRepository = alunoRepository;
 		this.avaliacaoRepository = avaliacaoRepository;
-		this.baseUrlCadastro = baseUrlCadastro;
+		this.baseUrlChamada = baseUrlChamada;
 	}
 
 	@Override
@@ -151,7 +151,7 @@ public class TurmaServiceImpl implements TurmaService {
 	@Transactional(readOnly = true)
 	public byte[] gerarImagemQrCode(UUID turmaId) {
 		Turma turma = buscarEntidadePorId(turmaId);
-		return gerarPng(TurmaResponse.from(turma, baseUrlCadastro).linkCadastro());
+		return gerarPng(TurmaResponse.from(turma, baseUrlChamada).linkCadastro());
 	}
 
 	private AulaDashboardItem montarItemDashboard(Aula aula, long totalAlunos) {
@@ -223,7 +223,7 @@ public class TurmaServiceImpl implements TurmaService {
 	}
 
 	private TurmaResponse toResponse(Turma turma) {
-		return TurmaResponse.from(turma, baseUrlCadastro);
+		return TurmaResponse.from(turma, baseUrlChamada);
 	}
 
 }

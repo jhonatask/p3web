@@ -17,8 +17,8 @@ public record TurmaResponse(
 
 ) {
 
-	public static TurmaResponse from(Turma turma, String baseUrlCadastro) {
-		String link = "%s/%s".formatted(baseUrlCadastro, turma.getTokenCadastro());
+	public static TurmaResponse from(Turma turma, String baseUrlChamada) {
+		String link = "%s/%s".formatted(baseUrlChamada, turma.getTokenCadastro());
 		return new TurmaResponse(
 				turma.getId(),
 				turma.getCurso().getId(),
