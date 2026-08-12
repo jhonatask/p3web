@@ -65,13 +65,14 @@ public class PresencaServiceImpl implements PresencaService {
 		Participante participante = buscarParticipantePorCpf(request.cpf());
 		Aula aula = aulaRepository.getReferenceById(aulaAtiva.id());
 		Turma turmaDaSessao = turmaRepository.getReferenceById(aulaAtiva.turmaId());
+		Aluno matricula = alunoService.matricularSeNecessario(participante.getId(), turmaDaSessao.getId());
 
 		Optional<Presenca> existente = presencaRepository.findByParticipanteIdAndAulaId(participante.getId(), aula.getId());
 		if (existente.isPresent()) {
-			return PresencaResponse.from(existente.get());
+			return PresencaResponse.from(existente.get(), matricula.getTurma().getNome());
 		}
 
-		OrigemPresenca origem = calcularOrigem(participante.getId(), turmaDaSessao.getId());
+		OrigemPresenca origem = calcularOrigem(matricula, turmaDaSessao.getId());
 
 		Presenca presenca = new Presenca();
 		presenca.setParticipante(participante);
@@ -81,7 +82,7 @@ public class PresencaServiceImpl implements PresencaService {
 		presenca.setMetodo(MetodoPresenca.FORMULARIO);
 		presenca.setOrigem(origem);
 
-		return salvarEPublicar(presenca);
+		return salvarEPublicar(presenca, matricula.getTurma().getNome());
 	}
 
 	@Override
@@ -89,7 +90,8 @@ public class PresencaServiceImpl implements PresencaService {
 		Aula aula = buscarAulaPorId(aulaId);
 		Participante participante = buscarParticipantePorCpf(request.cpf());
 		validarPresencaInedita(participante.getId(), aula.getId());
-		OrigemPresenca origem = calcularOrigem(participante.getId(), aula.getTurma().getId());
+		Aluno matricula = alunoService.matricularSeNecessario(participante.getId(), aula.getTurma().getId());
+		OrigemPresenca origem = calcularOrigem(matricula, aula.getTurma().getId());
 
 		Presenca presenca = new Presenca();
 		presenca.setParticipante(participante);
@@ -100,7 +102,7 @@ public class PresencaServiceImpl implements PresencaService {
 		presenca.setOrigem(origem);
 		presenca.setValidadoPor(usuarioAdminRepository.getReferenceById(professorId));
 
-		return salvarEPublicar(presenca);
+		return salvarEPublicar(presenca, matricula.getTurma().getNome());
 	}
 
 	@Override
@@ -112,8 +114,7 @@ public class PresencaServiceImpl implements PresencaService {
 				.toList();
 	}
 
-	private OrigemPresenca calcularOrigem(UUID participanteId, UUID turmaDaSessaoId) {
-		Aluno matricula = alunoService.matricularSeNecessario(participanteId, turmaDaSessaoId);
+	private OrigemPresenca calcularOrigem(Aluno matricula, UUID turmaDaSessaoId) {
 		return matricula.getTurma().getId().equals(turmaDaSessaoId) ? OrigemPresenca.CHAMADA : OrigemPresenca.REPOSICAO;
 	}
 
@@ -133,8 +134,8 @@ public class PresencaServiceImpl implements PresencaService {
 		}
 	}
 
-	private PresencaResponse salvarEPublicar(Presenca presenca) {
-		PresencaResponse response = PresencaResponse.from(presencaRepository.save(presenca));
+	private PresencaResponse salvarEPublicar(Presenca presenca, String turmaOrigemNome) {
+		PresencaResponse response = PresencaResponse.from(presencaRepository.save(presenca), turmaOrigemNome);
 		formaturaService.recalcularEGravarConclusao(presenca.getParticipante().getId());
 		messagingTemplate.convertAndSend("/topic/aulas/%s/presencas".formatted(response.aulaId()), response);
 		return response;
