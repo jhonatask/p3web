@@ -6,16 +6,25 @@ import br.com.familychurch.p3.aula.ModuloAula;
 import br.com.familychurch.p3.aula.TipoAula;
 import br.com.familychurch.p3.aula.repository.TipoAulaRepository;
 import br.com.familychurch.p3.formatura.dto.AulaFalta;
+import br.com.familychurch.p3.formatura.dto.LinkWhatsappResponse;
+import br.com.familychurch.p3.formatura.dto.PainelLinhaResponse;
+import br.com.familychurch.p3.formatura.dto.PainelTurmaResponse;
 import br.com.familychurch.p3.formatura.dto.StatusFormatura;
+import br.com.familychurch.p3.formatura.dto.StatusGeralFormatura;
 import br.com.familychurch.p3.formatura.dto.StatusModulo;
+import br.com.familychurch.p3.formatura.exception.CelularNaoCadastradoException;
 import br.com.familychurch.p3.formatura.exception.MatriculaNaoEncontradaException;
+import br.com.familychurch.p3.formatura.exception.NenhumaReposicaoPendenteException;
 import br.com.familychurch.p3.historico.HistoricoItem;
 import br.com.familychurch.p3.historico.OrigemHistorico;
 import br.com.familychurch.p3.historico.StatusHistorico;
 import br.com.familychurch.p3.historico.TipoHistorico;
 import br.com.familychurch.p3.historico.repository.HistoricoItemRepository;
+import br.com.familychurch.p3.participante.Participante;
 import br.com.familychurch.p3.participante.repository.ParticipanteRepository;
 import br.com.familychurch.p3.presenca.repository.PresencaRepository;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -32,6 +41,7 @@ public class FormaturaServiceImpl implements FormaturaService {
 
 	private static final String ITEM_ESCOLA_HOMBRIDADE = "Escola de Hombridade";
 	private static final int MAXIMO_FALTAS_POR_MODULO = 1;
+	private static final String PREFIXO_PAIS_WHATSAPP = "55";
 
 	private final AlunoRepository alunoRepository;
 	private final TipoAulaRepository tipoAulaRepository;
@@ -83,7 +93,11 @@ public class FormaturaServiceImpl implements FormaturaService {
 			modulos.add(new StatusModulo(entrada.getKey(), entrada.getValue().size(), faltasDoModulo, reprovado));
 		}
 
-		return new StatusFormatura(participanteId, modulos, apto, aRepor);
+		StatusGeralFormatura statusGeral = !apto ? StatusGeralFormatura.NAO_FORMA
+				: aRepor.isEmpty() ? StatusGeralFormatura.APTO_COMPLETO
+				: StatusGeralFormatura.APTO_REPOR_RECOMENDADO;
+
+		return new StatusFormatura(participanteId, modulos, apto, aRepor, statusGeral);
 	}
 
 	@Override
@@ -111,6 +125,48 @@ public class FormaturaServiceImpl implements FormaturaService {
 		// atualizar uma linha que originalmente veio de origem=CADASTRO.
 		item.setOrigem(OrigemHistorico.CHAMADA);
 		historicoItemRepository.save(item);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public PainelTurmaResponse obterPainel(UUID turmaId) {
+		List<Aluno> matriculados = alunoRepository.findByTurmaId(turmaId);
+		List<PainelLinhaResponse> linhas = matriculados.stream()
+				.map(aluno -> new PainelLinhaResponse(
+						aluno.getParticipante().getId(),
+						aluno.getParticipante().getNome(),
+						calcularStatus(aluno.getParticipante().getId(), aluno)))
+				.toList();
+
+		String turmaNome = matriculados.isEmpty() ? null : matriculados.get(0).getTurma().getNome();
+		return new PainelTurmaResponse(turmaId, turmaNome, linhas);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public LinkWhatsappResponse gerarLinkWhatsapp(UUID turmaId, UUID participanteId) {
+		Aluno matricula = buscarMatricula(participanteId);
+		if (!matricula.getTurma().getId().equals(turmaId)) {
+			throw new MatriculaNaoEncontradaException(participanteId);
+		}
+		Participante participante = matricula.getParticipante();
+		StatusFormatura status = calcularStatus(participanteId, matricula);
+
+		if (status.aRepor().isEmpty()) {
+			throw new NenhumaReposicaoPendenteException(participanteId);
+		}
+		String celularLimpo = participante.getCelular() != null ? participante.getCelular().replaceAll("\\D", "") : "";
+		if (celularLimpo.isBlank()) {
+			throw new CelularNaoCadastradoException(participanteId);
+		}
+
+		String temas = status.aRepor().stream().map(AulaFalta::tema).collect(Collectors.joining(", "));
+		String mensagem = "Ola %s! Vimos que voce ainda precisa repor a(s) aula(s) \"%s\" da Escola de Hombridade. Bora marcar a reposicao?"
+				.formatted(participante.getNome(), temas);
+		String link = "https://wa.me/%s%s?text=%s"
+				.formatted(PREFIXO_PAIS_WHATSAPP, celularLimpo, URLEncoder.encode(mensagem, StandardCharsets.UTF_8));
+
+		return new LinkWhatsappResponse(link);
 	}
 
 	private Aluno buscarMatricula(UUID participanteId) {

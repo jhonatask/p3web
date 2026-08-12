@@ -6,7 +6,9 @@ import br.com.familychurch.p3.aula.service.AulaService;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -39,6 +41,13 @@ public class AulaController {
 	@GetMapping("/api/publico/turmas/{token}/aula-ativa")
 	public AulaResponse buscarAulaAtivaPorToken(@PathVariable String token) {
 		return aulaService.buscarAulaAtivaPorToken(token);
+	}
+
+	@PatchMapping("/api/turmas/{turmaId}/agenda/atual/encerrar")
+	public ResponseEntity<AulaResponse> encerrarAulaAtual(@PathVariable UUID turmaId) {
+		return aulaService.encerrarAulaAtual(turmaId)
+				.map(ResponseEntity::ok)
+				.orElseGet(() -> ResponseEntity.noContent().build());
 	}
 
 }

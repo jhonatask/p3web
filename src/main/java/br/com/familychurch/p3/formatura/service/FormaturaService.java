@@ -1,5 +1,7 @@
 package br.com.familychurch.p3.formatura.service;
 
+import br.com.familychurch.p3.formatura.dto.LinkWhatsappResponse;
+import br.com.familychurch.p3.formatura.dto.PainelTurmaResponse;
 import br.com.familychurch.p3.formatura.dto.StatusFormatura;
 import java.util.UUID;
 
@@ -14,5 +16,17 @@ public interface FormaturaService {
 	 * Presenca - inclusive reposicoes, que podem reverter um "nao forma".
 	 */
 	void recalcularEGravarConclusao(UUID participanteId);
+
+	/**
+	 * Painel do lider: status de formatura de cada participante matriculado
+	 * na turma.
+	 */
+	PainelTurmaResponse obterPainel(UUID turmaId);
+
+	/**
+	 * Link wa.me pronto para o lider notificar o participante sobre a(s)
+	 * aula(s) pendente(s) de reposicao.
+	 */
+	LinkWhatsappResponse gerarLinkWhatsapp(UUID turmaId, UUID participanteId);
 
 }

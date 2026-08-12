@@ -20,6 +20,7 @@ import br.com.familychurch.p3.turma.Turma;
 import br.com.familychurch.p3.turma.repository.TurmaRepository;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -100,6 +101,27 @@ public class AulaServiceImpl implements AulaService {
 			throw new TurmaEncerradaException(tokenTurma);
 		}
 		return buscarAulaAtiva(turma.getId());
+	}
+
+	@Override
+	public Optional<AulaResponse> encerrarAulaAtual(UUID turmaId) {
+		sincronizarStatusPorData(turmaId);
+		List<Aula> ativas = aulaRepository.findByTurmaIdAndStatusOrderByTipoAulaOrdemAsc(turmaId, StatusAula.ATIVA);
+		if (ativas.isEmpty()) {
+			throw new NenhumaAulaAtivaException(turmaId);
+		}
+		for (Aula ativa : ativas) {
+			ativa.setStatus(StatusAula.ENCERRADA);
+			ativa.setEncerradaManualmente(true);
+		}
+
+		return aulaRepository.findByTurmaIdOrderByTipoAulaOrdemAsc(turmaId).stream()
+				.filter(aula -> aula.getStatus() == StatusAula.AGENDADA)
+				.findFirst()
+				.map(proxima -> {
+					proxima.setStatus(StatusAula.ATIVA);
+					return AulaResponse.from(proxima);
+				});
 	}
 
 	@Override

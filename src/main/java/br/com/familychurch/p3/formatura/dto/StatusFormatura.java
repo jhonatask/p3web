@@ -8,7 +8,8 @@ public record StatusFormatura(
 		UUID participanteId,
 		List<StatusModulo> modulos,
 		boolean apto,
-		List<AulaFalta> aRepor
+		List<AulaFalta> aRepor,
+		StatusGeralFormatura statusGeral
 
 ) {
 }
