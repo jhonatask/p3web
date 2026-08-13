@@ -9,7 +9,7 @@ import {
   type ParticipanteCadastroRequest,
   type TempoNaFamily,
 } from "@/lib/api";
-import { mascararCep, mascararCpf } from "@/lib/masks";
+import { mascararCelular, mascararCep, mascararCpf } from "@/lib/masks";
 import { validarCpf } from "@/lib/cpf";
 import { somenteDigitos } from "@/lib/texto";
 import { buscarEnderecoPorCep } from "@/lib/viacep";
@@ -49,6 +49,7 @@ const GCS_DISPONIVEIS = ["GC de Casais", "GC de Homens"];
 type CamposFormulario = {
   nome: string;
   cpf: string;
+  celular: string;
   dataNascimento: string;
   estadoCivil: EstadoCivil | null;
   temFilhos: boolean | null;
@@ -81,6 +82,7 @@ type ErrosFormulario = Partial<Record<keyof CamposFormulario, string>>;
 const CAMPOS_INICIAIS: CamposFormulario = {
   nome: "",
   cpf: "",
+  celular: "",
   dataNascimento: "",
   estadoCivil: null,
   temFilhos: null,
@@ -122,6 +124,10 @@ function validarCampos(campos: CamposFormulario): ErrosFormulario {
 
   if (!validarCpf(campos.cpf)) {
     erros.cpf = "CPF inválido. Confira os números digitados.";
+  }
+
+  if (somenteDigitos(campos.celular).length < 10) {
+    erros.celular = "Informe um celular válido, com DDD.";
   }
 
   if (!campos.dataNascimento) {
@@ -239,6 +245,7 @@ export default function FormularioCadastroBase({ onCadastroConcluido, cpfInicial
     const dados: ParticipanteCadastroRequest = {
       nome: campos.nome.trim(),
       cpf: somenteDigitos(campos.cpf),
+      celular: somenteDigitos(campos.celular),
       dataNascimento: campos.dataNascimento,
       estadoCivil: campos.estadoCivil as EstadoCivil,
       temFilhos: campos.temFilhos === true,
@@ -316,6 +323,17 @@ export default function FormularioCadastroBase({ onCadastroConcluido, cpfInicial
           inputMode="numeric"
           autoComplete="off"
           placeholder="000.000.000-00"
+        />
+
+        <CampoTexto
+          id={`${idBase}-celular`}
+          label="Celular"
+          valor={campos.celular}
+          onChange={(valor) => atualizarCampo("celular", mascararCelular(valor))}
+          erro={erros.celular}
+          inputMode="numeric"
+          autoComplete="tel"
+          placeholder="(00) 00000-0000"
         />
 
         <CampoTexto

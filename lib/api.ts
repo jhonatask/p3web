@@ -86,6 +86,7 @@ export type TempoNaFamily = "MENOS_6_MESES" | "DE_6_MESES_A_1_ANO" | "DE_1_A_3_A
 export type ParticipanteCadastroRequest = {
   nome: string;
   cpf: string;
+  celular: string;
   dataNascimento: string;
   estadoCivil: EstadoCivil;
   temFilhos: boolean;
