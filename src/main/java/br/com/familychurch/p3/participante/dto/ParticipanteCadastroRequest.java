@@ -18,6 +18,9 @@ public record ParticipanteCadastroRequest(
 		@Cpf
 		String cpf,
 
+		@NotBlank
+		String celular,
+
 		@NotNull
 		@Past
 		LocalDate dataNascimento,

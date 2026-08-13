@@ -175,6 +175,7 @@ class FormaturaControllerIT extends IntegrationTestSupport {
 						{
 						  "nome": "%s",
 						  "cpf": "%s",
+						  "celular": "%s",
 						  "dataNascimento": "1990-05-20",
 						  "estadoCivil": "SOLTEIRO",
 						  "temFilhos": false,
@@ -190,15 +191,8 @@ class FormaturaControllerIT extends IntegrationTestSupport {
 						  "participaGc": false,
 						  "aceiteLgpd": true
 						}
-						""".formatted(nome, cpf)))
+						""".formatted(nome, cpf, celular)))
 				.andExpect(status().isCreated());
-
-		// ParticipanteCadastroRequest nao coleta celular (gap conhecido, fora
-		// do escopo desta fase) - seta direto pelo repositorio pra testar o
-		// link do WhatsApp.
-		var participante = participanteRepository.findByCpf(cpf).orElseThrow();
-		participante.setCelular(celular);
-		participanteRepository.save(participante);
 	}
 
 	private Turma criarTurma(StatusTurma status) {

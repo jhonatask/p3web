@@ -180,6 +180,7 @@ class ParticipanteControllerIT extends IntegrationTestSupport {
 				{
 				  "nome": "Joao Silva",
 				  "cpf": "%s",
+				  "celular": "62999998888",
 				  "dataNascimento": "1990-05-20",
 				  "estadoCivil": "SOLTEIRO",
 				  "temFilhos": false,
@@ -202,6 +203,7 @@ class ParticipanteControllerIT extends IntegrationTestSupport {
 				{
 				  "nome": "Joao Silva",
 				  "cpf": "%s",
+				  "celular": "62999998888",
 				  "dataNascimento": "1990-05-20",
 				  "estadoCivil": "SOLTEIRO",
 				  "temFilhos": false,
@@ -224,6 +226,7 @@ class ParticipanteControllerIT extends IntegrationTestSupport {
 				{
 				  "nome": "Joao Silva",
 				  "cpf": "%s",
+				  "celular": "62999998888",
 				  "dataNascimento": "1990-05-20",
 				  "estadoCivil": "SOLTEIRO",
 				  "temFilhos": false,
@@ -249,6 +252,7 @@ class ParticipanteControllerIT extends IntegrationTestSupport {
 				{
 				  "nome": "%s",
 				  "cpf": "%s",
+				  "celular": "62999998888",
 				  "dataNascimento": "1990-05-20",
 				  "estadoCivil": "SOLTEIRO",
 				  "temFilhos": %s,

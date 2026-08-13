@@ -82,6 +82,7 @@ public class ParticipanteServiceImpl implements ParticipanteService {
 	private void preencherDadosDoFormulario(Participante participante, ParticipanteCadastroRequest request, String cpf) {
 		participante.setNome(request.nome());
 		participante.setCpf(cpf);
+		participante.setCelular(request.celular().replaceAll("\\D", ""));
 		participante.setDataNascimento(request.dataNascimento());
 		participante.setEstadoCivil(request.estadoCivil());
 		participante.setTemFilhos(request.temFilhos());
