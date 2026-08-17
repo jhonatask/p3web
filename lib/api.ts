@@ -330,6 +330,7 @@ export type AulaAdmin = {
   tema: string;
   data: string;
   status: string;
+  encerradaManualmente: boolean;
 };
 
 export type ItemAgenda = {

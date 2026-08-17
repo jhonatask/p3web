@@ -41,8 +41,8 @@ export default function FormularioAgenda({ turmaId, tiposAula, aulas, onAtualiza
     setDatas(novasDatas);
   }, [aulas]);
 
-  function statusDe(tipoAulaId: string): string | null {
-    return aulas.find((aula) => aula.tipoAulaId === tipoAulaId)?.status ?? null;
+  function aulaDe(tipoAulaId: string): AulaAdmin | null {
+    return aulas.find((aula) => aula.tipoAulaId === tipoAulaId) ?? null;
   }
 
   async function salvar() {
@@ -84,7 +84,9 @@ export default function FormularioAgenda({ turmaId, tiposAula, aulas, onAtualiza
 
       <div className="space-y-3">
         {tiposAula.map((tipo) => {
-          const status = statusDe(tipo.id);
+          const aula = aulaDe(tipo.id);
+          const status = aula?.status ?? null;
+          const bloqueada = status === "ENCERRADA" && !aula?.encerradaManualmente;
           return (
             <div key={tipo.id} className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -110,7 +112,7 @@ export default function FormularioAgenda({ turmaId, tiposAula, aulas, onAtualiza
                 <input
                   type="date"
                   value={datas[tipo.id] ?? ""}
-                  disabled={status === "ENCERRADA"}
+                  disabled={bloqueada}
                   onChange={(evento) => setDatas((atual) => ({ ...atual, [tipo.id]: evento.target.value }))}
                   className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm text-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-800 disabled:bg-neutral-100 disabled:text-neutral-400"
                 />
