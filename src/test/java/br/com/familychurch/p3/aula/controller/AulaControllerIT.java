@@ -174,6 +174,41 @@ class AulaControllerIT extends IntegrationTestSupport {
 				.andExpect(status().isNotFound());
 	}
 
+	@Test
+	void deveReabrirAulaEncerradaManualmenteAoRedefinirData() throws Exception {
+		UUID tipoAula1 = obterTipoAulaPorNumero(1);
+		definirAgenda(turmaAtiva.getId(), tipoAula1, LocalDate.now());
+
+		mockMvc.perform(patch("/api/turmas/{turmaId}/agenda/atual/desativar", turmaAtiva.getId())
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin))
+				.andExpect(status().isNoContent());
+
+		definirAgenda(turmaAtiva.getId(), tipoAula1, LocalDate.now());
+
+		mockMvc.perform(get("/api/publico/turmas/{token}/aula-ativa", turmaAtiva.getTokenCadastro()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.numero").value(1))
+				.andExpect(jsonPath("$.status").value("ATIVA"));
+	}
+
+	@Test
+	void deveRetornar409AoRedefinirDataDeAulaEncerradaAutomaticamente() throws Exception {
+		UUID tipoAula1 = obterTipoAulaPorNumero(1);
+		// vira ATIVA (data == hoje) e depois ENCERRADA automaticamente pela
+		// sincronizacao por data (nao pelos botoes de encerrar/desativar) -
+		// encerradaManualmente permanece false, e essa data nao pode ser reaberta.
+		definirAgenda(turmaAtiva.getId(), tipoAula1, LocalDate.now());
+		definirAgenda(turmaAtiva.getId(), tipoAula1, LocalDate.now().minusDays(1));
+
+		mockMvc.perform(put("/api/turmas/{turmaId}/agenda", turmaAtiva.getId())
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"itens": [{"tipoAulaId": "%s", "data": "%s"}]}
+						""".formatted(tipoAula1, LocalDate.now())))
+				.andExpect(status().isConflict());
+	}
+
 	private void definirAgenda(UUID turmaId, UUID tipoAulaId, LocalDate data) throws Exception {
 		mockMvc.perform(put("/api/turmas/{turmaId}/agenda", turmaId)
 				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin)

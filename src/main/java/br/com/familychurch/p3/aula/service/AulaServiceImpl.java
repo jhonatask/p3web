@@ -65,7 +65,11 @@ public class AulaServiceImpl implements AulaService {
 					return nova;
 				});
 		if (aula.getId() != null && aula.getStatus() == StatusAula.ENCERRADA) {
-			throw new AulaJaEncerradaException(tipoAula.getId());
+			if (!aula.isEncerradaManualmente()) {
+				throw new AulaJaEncerradaException(tipoAula.getId());
+			}
+			aula.setStatus(StatusAula.AGENDADA);
+			aula.setEncerradaManualmente(false);
 		}
 		aula.setData(item.data());
 		aulaRepository.save(aula);
@@ -141,11 +145,31 @@ public class AulaServiceImpl implements AulaService {
 	public void sincronizarStatusPorData(UUID turmaId) {
 		LocalDate hoje = LocalDate.now();
 		for (Aula aula : aulaRepository.findByTurmaId(turmaId)) {
-			if (aula.getStatus() == StatusAula.AGENDADA && aula.getData().isEqual(hoje)) {
-				aula.setStatus(StatusAula.ATIVA);
-			} else if (aula.getStatus() == StatusAula.ATIVA && aula.getData().isBefore(hoje)) {
-				aula.setStatus(StatusAula.ENCERRADA);
+			sincronizarStatusPorData(aula, hoje);
+		}
+	}
+
+	@Override
+	public void sincronizarStatusPorDataTodasTurmasAtivas() {
+		LocalDate hoje = LocalDate.now();
+		for (Turma turma : turmaRepository.findByStatus(StatusTurma.ATIVA)) {
+			for (Aula aula : aulaRepository.findByTurmaId(turma.getId())) {
+				sincronizarStatusPorData(aula, hoje);
 			}
+		}
+	}
+
+	/**
+	 * Usa data <= hoje (nao apenas data == hoje) para promover AGENDADA ->
+	 * ATIVA: se o job (ou a sincronizacao lazy) nao rodar exatamente no dia
+	 * agendado - servidor fora do ar, ninguem acessou o sistema - a aula nao
+	 * pode ficar presa em AGENDADA para sempre.
+	 */
+	private void sincronizarStatusPorData(Aula aula, LocalDate hoje) {
+		if (aula.getStatus() == StatusAula.AGENDADA && !aula.getData().isAfter(hoje)) {
+			aula.setStatus(StatusAula.ATIVA);
+		} else if (aula.getStatus() == StatusAula.ATIVA && aula.getData().isBefore(hoje)) {
+			aula.setStatus(StatusAula.ENCERRADA);
 		}
 	}
 

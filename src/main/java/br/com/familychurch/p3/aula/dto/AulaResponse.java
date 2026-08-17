@@ -15,7 +15,8 @@ public record AulaResponse(
 		Integer numero,
 		String tema,
 		LocalDate data,
-		StatusAula status
+		StatusAula status,
+		boolean encerradaManualmente
 
 ) {
 
@@ -28,7 +29,8 @@ public record AulaResponse(
 				aula.getTipoAula().getNumero(),
 				aula.getTipoAula().getTema(),
 				aula.getData(),
-				aula.getStatus());
+				aula.getStatus(),
+				aula.isEncerradaManualmente());
 	}
 
 }

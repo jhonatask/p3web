@@ -21,6 +21,14 @@ public interface AulaService {
 	void sincronizarStatusPorData(UUID turmaId);
 
 	/**
+	 * Mesma sincronizacao de {@link #sincronizarStatusPorData(UUID)}, mas
+	 * para todas as turmas ATIVAS de uma vez - usado pelo job agendado
+	 * (AulaStatusScheduler) para fechar/abrir aulas por data sem depender de
+	 * alguem acessar a tela da turma.
+	 */
+	void sincronizarStatusPorDataTodasTurmasAtivas();
+
+	/**
 	 * Avanco manual (alternativa ao automatico por data): encerra a(s)
 	 * aula(s) ATIVA(s) e abre a proxima AGENDADA por ordem do catalogo,
 	 * independente da data agendada. Retorna a nova aula ativa, ou vazio se
