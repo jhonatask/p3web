@@ -45,10 +45,15 @@ export default function FormularioAgenda({ turmaId, tiposAula, aulas, onAtualiza
     return aulas.find((aula) => aula.tipoAulaId === tipoAulaId) ?? null;
   }
 
+  function bloqueada(tipoAulaId: string): boolean {
+    const aula = aulaDe(tipoAulaId);
+    return aula?.status === "ENCERRADA" && !aula.encerradaManualmente;
+  }
+
   async function salvar() {
     setErro(null);
     const itens = Object.entries(datas)
-      .filter(([, data]) => data)
+      .filter(([tipoAulaId, data]) => data && !bloqueada(tipoAulaId))
       .map(([tipoAulaId, data]) => ({ tipoAulaId, data }));
 
     if (itens.length === 0) {
@@ -86,7 +91,7 @@ export default function FormularioAgenda({ turmaId, tiposAula, aulas, onAtualiza
         {tiposAula.map((tipo) => {
           const aula = aulaDe(tipo.id);
           const status = aula?.status ?? null;
-          const bloqueada = status === "ENCERRADA" && !aula?.encerradaManualmente;
+          const itemBloqueado = bloqueada(tipo.id);
           return (
             <div key={tipo.id} className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -112,7 +117,7 @@ export default function FormularioAgenda({ turmaId, tiposAula, aulas, onAtualiza
                 <input
                   type="date"
                   value={datas[tipo.id] ?? ""}
-                  disabled={bloqueada}
+                  disabled={itemBloqueado}
                   onChange={(evento) => setDatas((atual) => ({ ...atual, [tipo.id]: evento.target.value }))}
                   className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm text-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-800 disabled:bg-neutral-100 disabled:text-neutral-400"
                 />
