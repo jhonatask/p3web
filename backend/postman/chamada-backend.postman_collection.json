@@ -1,0 +1,408 @@
+{
+	"info": {
+		"name": "Chamada Backend - Escola de Hombridade",
+		"description": "Colecao dos endpoints do backend do app de controle de presenca. Rode as pastas em ordem (Auth -> Curso -> Turma -> Participante -> Aluno -> Aula -> Presenca -> Avaliacao -> Interesse -> Dashboard) para encadear as variaveis automaticamente (token, cursoId, turmaId, tokenCadastroTurma, aulaId, qrToken). Avaliacao/Interesse exigem que o Check-in por QR Code (pasta Presenca) tenha sido feito antes, com o mesmo CPF. Participante e a base de cadastro unica por CPF, independente de turma/curso - Aluno referencia um Participante por baixo.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{ "key": "baseUrl", "value": "http://localhost:8080" },
+		{ "key": "token", "value": "" },
+		{ "key": "cursoId", "value": "" },
+		{ "key": "turmaId", "value": "" },
+		{ "key": "tokenCadastroTurma", "value": "" },
+		{ "key": "aulaId", "value": "" },
+		{ "key": "qrToken", "value": "" }
+	],
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const body = pm.response.json();",
+									"pm.collectionVariables.set('token', body.token);",
+									"pm.test('login retornou token', () => pm.expect(body.token).to.be.a('string'));"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [ { "key": "Content-Type", "value": "application/json" } ],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@hombridade.local\",\n  \"senha\": \"hombridade2026\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/api/auth/login", "host": [ "{{baseUrl}}" ], "path": [ "api", "auth", "login" ] }
+					}
+				}
+			]
+		},
+		{
+			"name": "Curso",
+			"item": [
+				{
+					"name": "Criar Curso",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const body = pm.response.json();",
+									"pm.collectionVariables.set('cursoId', body.id);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nome\": \"Escola de Hombridade\",\n  \"descricao\": \"Curso de formacao para homens da igreja\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/api/cursos", "host": [ "{{baseUrl}}" ], "path": [ "api", "cursos" ] }
+					}
+				},
+				{
+					"name": "Listar Cursos",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+						"url": {
+							"raw": "{{baseUrl}}/api/cursos?ativo=true",
+							"host": [ "{{baseUrl}}" ],
+							"path": [ "api", "cursos" ],
+							"query": [ { "key": "ativo", "value": "true" } ]
+						}
+					}
+				},
+				{
+					"name": "Buscar Curso por ID",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+						"url": { "raw": "{{baseUrl}}/api/cursos/{{cursoId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "cursos", "{{cursoId}}" ] }
+					}
+				},
+				{
+					"name": "Atualizar Curso",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nome\": \"Escola de Hombridade\",\n  \"descricao\": \"Descricao atualizada\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/api/cursos/{{cursoId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "cursos", "{{cursoId}}" ] }
+					}
+				},
+				{
+					"name": "Desativar Curso",
+					"request": {
+						"method": "PATCH",
+						"header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+						"url": { "raw": "{{baseUrl}}/api/cursos/{{cursoId}}/desativar", "host": [ "{{baseUrl}}" ], "path": [ "api", "cursos", "{{cursoId}}", "desativar" ] }
+					}
+				}
+			]
+		},
+		{
+			"name": "Turma",
+			"item": [
+				{
+					"name": "Criar Turma",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const body = pm.response.json();",
+									"pm.collectionVariables.set('turmaId', body.id);",
+									"pm.collectionVariables.set('tokenCadastroTurma', body.tokenCadastro);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"cursoId\": \"{{cursoId}}\",\n  \"nome\": \"Campus 85 - Turma 13\",\n  \"moduloAtual\": \"Provisao\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/api/turmas", "host": [ "{{baseUrl}}" ], "path": [ "api", "turmas" ] }
+					}
+				},
+				{
+					"name": "Listar Turmas",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+						"url": {
+							"raw": "{{baseUrl}}/api/turmas?cursoId={{cursoId}}",
+							"host": [ "{{baseUrl}}" ],
+							"path": [ "api", "turmas" ],
+							"query": [ { "key": "cursoId", "value": "{{cursoId}}" }, { "key": "status", "value": "ATIVA", "disabled": true } ]
+						}
+					}
+				},
+				{
+					"name": "Buscar Turma por ID",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+						"url": { "raw": "{{baseUrl}}/api/turmas/{{turmaId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "turmas", "{{turmaId}}" ] }
+					}
+				},
+				{
+					"name": "Encerrar Turma",
+					"request": {
+						"method": "PATCH",
+						"header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+						"url": { "raw": "{{baseUrl}}/api/turmas/{{turmaId}}/encerrar", "host": [ "{{baseUrl}}" ], "path": [ "api", "turmas", "{{turmaId}}", "encerrar" ] }
+					}
+				}
+			]
+		},
+		{
+			"name": "Participante",
+			"item": [
+				{
+					"name": "Cadastro Publico de Participante",
+					"request": {
+						"method": "POST",
+						"header": [ { "key": "Content-Type", "value": "application/json" } ],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nome\": \"Joao da Silva\",\n  \"cpf\": \"529.982.247-25\",\n  \"dataNascimento\": \"1990-05-20\",\n  \"estadoCivil\": \"SOLTEIRO\",\n  \"temFilhos\": true,\n  \"quantidadeFilhos\": 2,\n  \"cep\": \"74000-000\",\n  \"rua\": \"Rua das Flores\",\n  \"numero\": \"123\",\n  \"complemento\": \"\",\n  \"bairro\": \"Centro\",\n  \"cidade\": \"Goiania\",\n  \"uf\": \"GO\",\n  \"pontoReferencia\": \"\",\n  \"tempoNaFamily\": \"MAIS_DE_3_ANOS\",\n  \"batizado\": true,\n  \"serveMinisterio\": false,\n  \"qualMinisterioServe\": \"\",\n  \"instagram\": \"@joaosilva\",\n  \"facebook\": \"\",\n  \"cursosRealizados\": [\"Hombridade\"],\n  \"cursosOutros\": \"\",\n  \"eventosParticipou\": [\"Awake\"],\n  \"eventosOutros\": \"\",\n  \"participaGc\": true,\n  \"quaisGcs\": [\"GC de Homens\"],\n  \"aceiteLgpd\": true\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/api/publico/participantes", "host": [ "{{baseUrl}}" ], "path": [ "api", "publico", "participantes" ] },
+						"description": "Rota publica, sem Authorization. Cadastro base unico por CPF, reaproveitado por todos os ministerios. Reenviar o mesmo CPF atualiza o cadastro existente em vez de duplicar. latitude/longitude sao calculados no servidor (Geocoding) e nunca aceitos aqui."
+					}
+				},
+				{
+					"name": "Consultar Participante por CPF",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+						"url": { "raw": "{{baseUrl}}/api/participantes/52998224725", "host": [ "{{baseUrl}}" ], "path": [ "api", "participantes", "52998224725" ] },
+						"description": "Exige Authorization. Devolve o perfil completo (identidade, endereco, vida na Family, comunhao) mais o historico de cursos/eventos do participante."
+					}
+				}
+			]
+		},
+		{
+			"name": "Aluno",
+			"item": [
+				{
+					"name": "Cadastro Publico de Aluno",
+					"request": {
+						"method": "POST",
+						"header": [ { "key": "Content-Type", "value": "application/json" } ],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nome\": \"Joao da Silva\",\n  \"cpf\": \"529.982.247-25\",\n  \"celular\": \"11999999999\",\n  \"campus\": \"Campus 85\",\n  \"aceiteLgpd\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/publico/turmas/{{tokenCadastroTurma}}/alunos",
+							"host": [ "{{baseUrl}}" ],
+							"path": [ "api", "publico", "turmas", "{{tokenCadastroTurma}}", "alunos" ]
+						},
+						"description": "Rota publica, sem Authorization. Usa o tokenCadastro gerado pela Turma (nao o id interno). CPF de teste com digitos verificadores validos."
+					}
+				},
+				{
+					"name": "Listar Alunos da Turma",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+						"url": { "raw": "{{baseUrl}}/api/turmas/{{turmaId}}/alunos", "host": [ "{{baseUrl}}" ], "path": [ "api", "turmas", "{{turmaId}}", "alunos" ] }
+					}
+				}
+			]
+		},
+		{
+			"name": "Aula",
+			"item": [
+				{
+					"name": "Criar Aula",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const body = pm.response.json();",
+									"pm.collectionVariables.set('aulaId', body.id);",
+									"pm.collectionVariables.set('qrToken', body.qrToken);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"numero\": 1,\n  \"modulo\": \"Provisao\",\n  \"data\": \"2026-07-02\",\n  \"janelaAbertura\": \"2026-07-02T19:00:00\",\n  \"janelaFechamento\": \"2026-07-02T21:00:00\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/api/turmas/{{turmaId}}/aulas", "host": [ "{{baseUrl}}" ], "path": [ "api", "turmas", "{{turmaId}}", "aulas" ] },
+						"description": "janelaAbertura/janelaFechamento delimitam quando o check-in (QR code ou manual) e aceito para essa aula. Ajuste os horarios para o momento do teste antes de rodar."
+					}
+				},
+				{
+					"name": "Listar Aulas da Turma",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+						"url": { "raw": "{{baseUrl}}/api/turmas/{{turmaId}}/aulas", "host": [ "{{baseUrl}}" ], "path": [ "api", "turmas", "{{turmaId}}", "aulas" ] }
+					}
+				},
+				{
+					"name": "Buscar Aula por ID",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+						"url": { "raw": "{{baseUrl}}/api/aulas/{{aulaId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "aulas", "{{aulaId}}" ] }
+					}
+				},
+				{
+					"name": "Obter Imagem do QR Code",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+						"url": { "raw": "{{baseUrl}}/api/aulas/{{aulaId}}/qrcode", "host": [ "{{baseUrl}}" ], "path": [ "api", "aulas", "{{aulaId}}", "qrcode" ] },
+						"description": "Retorna a imagem PNG do QR code dinamico da aula (image/png), para exibir em sala. O conteudo do QR code e o qrToken usado no check-in."
+					}
+				}
+			]
+		},
+		{
+			"name": "Presenca",
+			"item": [
+				{
+					"name": "Check-in por QR Code",
+					"request": {
+						"method": "POST",
+						"header": [ { "key": "Content-Type", "value": "application/json" } ],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"qrToken\": \"{{qrToken}}\",\n  \"cpf\": \"529.982.247-25\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/api/publico/checkin", "host": [ "{{baseUrl}}" ], "path": [ "api", "publico", "checkin" ] },
+						"description": "Rota publica, sem Authorization. Identifica o aluno pelo CPF e a aula pelo qrToken exibido em sala; so aceita check-in dentro da janela de abertura/fechamento da aula."
+					}
+				},
+				{
+					"name": "Marcar Presenca Manual (fallback)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"cpf\": \"529.982.247-25\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/api/aulas/{{aulaId}}/presencas/manual", "host": [ "{{baseUrl}}" ], "path": [ "api", "aulas", "{{aulaId}}", "presencas", "manual" ] },
+						"description": "Usado pelo professor/admin para marcar presenca de quem esqueceu o celular ou nao tem o app ainda."
+					}
+				},
+				{
+					"name": "Listar Presencas da Aula",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+						"url": { "raw": "{{baseUrl}}/api/aulas/{{aulaId}}/presencas", "host": [ "{{baseUrl}}" ], "path": [ "api", "aulas", "{{aulaId}}", "presencas" ] },
+						"description": "Lista o estado atual da presenca da aula. A mesma informacao e publicada em tempo real via WebSocket STOMP no topico /topic/aulas/{aulaId}/presencas (endpoint SockJS em /ws)."
+					}
+				}
+			]
+		},
+		{
+			"name": "Avaliacao",
+			"item": [
+				{
+					"name": "Registrar Avaliacao",
+					"request": {
+						"method": "POST",
+						"header": [ { "key": "Content-Type", "value": "application/json" } ],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"cpf\": \"529.982.247-25\",\n  \"nota\": 9,\n  \"didatica\": \"OTIMA\",\n  \"sugestao\": \"Otima aula, professor bem dinamico\",\n  \"nps\": 10\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/api/publico/aulas/{{aulaId}}/avaliacoes", "host": [ "{{baseUrl}}" ], "path": [ "api", "publico", "aulas", "{{aulaId}}", "avaliacoes" ] },
+						"description": "Rota publica, sem Authorization. So aceita a avaliacao se o aluno (pelo CPF) ja tiver feito check-in nessa aula (pasta Presenca > Check-in por QR Code); didatica aceita OTIMA, BOA, REGULAR ou RUIM; nota/nps vao de 0 a 10."
+					}
+				},
+				{
+					"name": "Listar Avaliacoes da Aula",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+						"url": { "raw": "{{baseUrl}}/api/aulas/{{aulaId}}/avaliacoes", "host": [ "{{baseUrl}}" ], "path": [ "api", "aulas", "{{aulaId}}", "avaliacoes" ] }
+					}
+				}
+			]
+		},
+		{
+			"name": "Interesse",
+			"item": [
+				{
+					"name": "Registrar Interesse",
+					"request": {
+						"method": "POST",
+						"header": [ { "key": "Content-Type", "value": "application/json" } ],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"cpf\": \"529.982.247-25\",\n  \"gcHomens\": true,\n  \"proximoAwake\": false,\n  \"discipulado\": true\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/api/publico/aulas/{{aulaId}}/interesses", "host": [ "{{baseUrl}}" ], "path": [ "api", "publico", "aulas", "{{aulaId}}", "interesses" ] },
+						"description": "Rota publica, sem Authorization. So aceita o registro se o aluno (pelo CPF) ja tiver feito check-in nessa aula (pasta Presenca > Check-in por QR Code)."
+					}
+				},
+				{
+					"name": "Listar Interesses da Turma",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+						"url": { "raw": "{{baseUrl}}/api/turmas/{{turmaId}}/interesses", "host": [ "{{baseUrl}}" ], "path": [ "api", "turmas", "{{turmaId}}", "interesses" ] },
+						"description": "Lista os interesses (GC de homens, proximo Awake, discipulado) de todas as aulas da turma, para a tela de gestao de interesse do admin."
+					}
+				}
+			]
+		},
+		{
+			"name": "Dashboard",
+			"item": [
+				{
+					"name": "Dashboard da Turma",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+						"url": { "raw": "{{baseUrl}}/api/turmas/{{turmaId}}/dashboard", "host": [ "{{baseUrl}}" ], "path": [ "api", "turmas", "{{turmaId}}", "dashboard" ] },
+						"description": "Visao agregada da turma: frequencia media, nota media e NPS medio, alem do detalhamento por aula (porAula)."
+					}
+				}
+			]
+		}
+	]
+}
