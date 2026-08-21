@@ -17,7 +17,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -41,10 +40,8 @@ class CursoControllerIT extends IntegrationTestSupport {
 	@Autowired
 	private AvaliacaoRepository avaliacaoRepository;
 
-	private String tokenAdmin;
-
 	@BeforeEach
-	void configurarCenario() throws Exception {
+	void configurarCenario() {
 		avaliacaoRepository.deleteAll();
 		presencaRepository.deleteAll();
 		aulaRepository.deleteAll();
@@ -53,14 +50,13 @@ class CursoControllerIT extends IntegrationTestSupport {
 		// Nao apaga curso: "Curso de Teste" e dado de referencia
 		// semeado pela migration V15 (tem tipo_aula dependente) - os testes
 		// aqui usam nomes de curso proprios, sem colidir com ele.
-		tokenAdmin = obterTokenAdmin();
 	}
 
 	@Test
 	void deveCriarCursoComSucesso() throws Exception {
 		String nome = "Curso de Teste " + System.nanoTime();
 		mockMvc.perform(post("/api/cursos")
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin)
+				.with(autenticado())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{"nome": "%s", "descricao": "Curso base"}
@@ -76,7 +72,7 @@ class CursoControllerIT extends IntegrationTestSupport {
 		criarCurso(nome);
 
 		mockMvc.perform(post("/api/cursos")
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin)
+				.with(autenticado())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{"nome": "%s", "descricao": "Duplicado"}
@@ -90,7 +86,7 @@ class CursoControllerIT extends IntegrationTestSupport {
 		UUID idInexistente = UUID.randomUUID();
 
 		mockMvc.perform(get("/api/cursos/{id}", idInexistente)
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin))
+				.with(autenticado()))
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.status").value(404));
 	}
@@ -103,13 +99,13 @@ class CursoControllerIT extends IntegrationTestSupport {
 		String idCursoInativo = criarCurso(nomeInativo);
 		criarCurso(nomeAtivo);
 		mockMvc.perform(patch("/api/cursos/{id}/desativar", idCursoInativo)
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin));
+				.with(autenticado()));
 
 		// Nao assume lista exclusiva: curso e dado misto (referencia semeada
 		// + dado de teste, nunca limpo por completo entre testes desta
 		// classe) - so verifica presenca/ausencia dos nomes desta execucao.
 		var resultado = mockMvc.perform(get("/api/cursos").param("ativo", "true")
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin))
+				.with(autenticado()))
 				.andExpect(status().isOk())
 				.andReturn();
 		var nomes = objectMapper.readTree(resultado.getResponse().getContentAsString());
@@ -122,7 +118,7 @@ class CursoControllerIT extends IntegrationTestSupport {
 	@Test
 	void deveRetornar400ComErroDeValidacaoQuandoNomeEmBranco() throws Exception {
 		mockMvc.perform(post("/api/cursos")
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin)
+				.with(autenticado())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{"nome": "", "descricao": "sem nome"}
@@ -139,7 +135,7 @@ class CursoControllerIT extends IntegrationTestSupport {
 
 	private String criarCurso(String nome) throws Exception {
 		var resultado = mockMvc.perform(post("/api/cursos")
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin)
+				.with(autenticado())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("{\"nome\": \"%s\"}".formatted(nome)))
 				.andReturn();

@@ -24,7 +24,6 @@ import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -60,7 +59,6 @@ class AvaliacaoControllerIT extends IntegrationTestSupport {
 	@Autowired
 	private HistoricoItemRepository historicoItemRepository;
 
-	private String tokenAdmin;
 	private Turma turmaAtiva;
 
 	@BeforeEach
@@ -72,7 +70,6 @@ class AvaliacaoControllerIT extends IntegrationTestSupport {
 		alunoRepository.deleteAll();
 		participanteRepository.deleteAll();
 		turmaRepository.deleteAll();
-		tokenAdmin = obterTokenAdmin();
 		turmaAtiva = criarTurma(StatusTurma.ATIVA);
 		cadastrarParticipante(CPF_COM_PRESENCA, "Joao Silva");
 		cadastrarParticipante(CPF_SEM_PRESENCA, "Pedro Alves");
@@ -159,7 +156,7 @@ class AvaliacaoControllerIT extends IntegrationTestSupport {
 		registrarAvaliacao(aulaId, CPF_COM_PRESENCA);
 
 		mockMvc.perform(get("/api/aulas/{aulaId}/avaliacoes", aulaId)
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin))
+				.with(autenticado()))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$", hasSize(1)))
 				.andExpect(jsonPath("$[0].participanteNome").value("Joao Silva"));
@@ -184,7 +181,7 @@ class AvaliacaoControllerIT extends IntegrationTestSupport {
 	private String criarAulaAtiva(int numeroTipoAula) throws Exception {
 		java.util.UUID tipoAulaId = obterTipoAulaPorNumero(numeroTipoAula);
 		mockMvc.perform(put("/api/turmas/{turmaId}/agenda", turmaAtiva.getId())
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin)
+				.with(autenticado())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{"itens": [{"tipoAulaId": "%s", "data": "%s"}]}

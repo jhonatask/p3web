@@ -16,7 +16,6 @@ import br.com.familychurch.p3.presenca.repository.PresencaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -42,16 +41,13 @@ class ParticipanteControllerIT extends IntegrationTestSupport {
 	@Autowired
 	private PresencaRepository presencaRepository;
 
-	private String tokenAdmin;
-
 	@BeforeEach
-	void configurarCenario() throws Exception {
+	void configurarCenario() {
 		avaliacaoRepository.deleteAll();
 		presencaRepository.deleteAll();
 		historicoItemRepository.deleteAll();
 		alunoRepository.deleteAll();
 		participanteRepository.deleteAll();
-		tokenAdmin = obterTokenAdmin();
 	}
 
 	@Test
@@ -127,7 +123,7 @@ class ParticipanteControllerIT extends IntegrationTestSupport {
 				.andExpect(status().isCreated());
 
 		mockMvc.perform(get("/api/participantes/{cpf}", CPF_VALIDO)
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin))
+				.with(autenticado()))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.nome").value("Joao Silva"))
 				.andExpect(jsonPath("$.endereco.bairro").value("Centro"))
@@ -137,7 +133,7 @@ class ParticipanteControllerIT extends IntegrationTestSupport {
 	@Test
 	void deveRetornar404AoConsultarCpfNaoCadastrado() throws Exception {
 		mockMvc.perform(get("/api/participantes/{cpf}", CPF_VALIDO)
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin))
+				.with(autenticado()))
 				.andExpect(status().isNotFound());
 	}
 
@@ -165,7 +161,7 @@ class ParticipanteControllerIT extends IntegrationTestSupport {
 				.andExpect(status().isCreated());
 
 		mockMvc.perform(get("/api/participantes/{cpf}", CPF_VALIDO)
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin))
+				.with(autenticado()))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.consentimentoLgpd").value(true))
 				.andExpect(jsonPath("$.consentimentoLgpdTimestamp").exists());

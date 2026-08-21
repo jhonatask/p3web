@@ -22,7 +22,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -49,7 +48,6 @@ class AulaControllerIT extends IntegrationTestSupport {
 	@Autowired
 	private AvaliacaoRepository avaliacaoRepository;
 
-	private String tokenAdmin;
 	private Turma turmaAtiva;
 
 	@BeforeEach
@@ -59,7 +57,6 @@ class AulaControllerIT extends IntegrationTestSupport {
 		aulaRepository.deleteAll();
 		alunoRepository.deleteAll();
 		turmaRepository.deleteAll();
-		tokenAdmin = obterTokenAdmin();
 		turmaAtiva = criarTurma(StatusTurma.ATIVA);
 	}
 
@@ -69,7 +66,7 @@ class AulaControllerIT extends IntegrationTestSupport {
 		UUID tipoAula2 = obterTipoAulaPorNumero(2);
 
 		mockMvc.perform(put("/api/turmas/{turmaId}/agenda", turmaAtiva.getId())
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin)
+				.with(autenticado())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{"itens": [
@@ -109,7 +106,7 @@ class AulaControllerIT extends IntegrationTestSupport {
 		UUID tipoAula1 = obterTipoAulaPorNumero(1);
 
 		mockMvc.perform(put("/api/turmas/{turmaId}/agenda", turmaInexistente)
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin)
+				.with(autenticado())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{"itens": [{"tipoAulaId": "%s", "data": "2026-01-06"}]}
@@ -123,7 +120,7 @@ class AulaControllerIT extends IntegrationTestSupport {
 		UUID tipoAula1 = obterTipoAulaPorNumero(1);
 
 		mockMvc.perform(put("/api/turmas/{turmaId}/agenda", turmaEncerrada.getId())
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin)
+				.with(autenticado())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{"itens": [{"tipoAulaId": "%s", "data": "2026-01-06"}]}
@@ -139,7 +136,7 @@ class AulaControllerIT extends IntegrationTestSupport {
 		definirAgenda(turmaAtiva.getId(), tipoAula1, LocalDate.now().plusDays(7));
 
 		mockMvc.perform(get("/api/turmas/{turmaId}/aulas", turmaAtiva.getId())
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin))
+				.with(autenticado()))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$", hasSize(2)))
 				.andExpect(jsonPath("$[0].numero").value(1))
@@ -154,14 +151,14 @@ class AulaControllerIT extends IntegrationTestSupport {
 		definirAgenda(turmaAtiva.getId(), tipoAula2, LocalDate.now().plusDays(7));
 
 		mockMvc.perform(patch("/api/turmas/{turmaId}/agenda/atual/desativar", turmaAtiva.getId())
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin))
+				.with(autenticado()))
 				.andExpect(status().isNoContent());
 
 		mockMvc.perform(get("/api/publico/turmas/{token}/aula-ativa", turmaAtiva.getTokenCadastro()))
 				.andExpect(status().isNotFound());
 
 		mockMvc.perform(get("/api/turmas/{turmaId}/aulas", turmaAtiva.getId())
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin))
+				.with(autenticado()))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$[0].status").value("ENCERRADA"))
 				.andExpect(jsonPath("$[1].status").value("AGENDADA"));
@@ -170,7 +167,7 @@ class AulaControllerIT extends IntegrationTestSupport {
 	@Test
 	void deveRetornar404AoDesativarQuandoNenhumaAulaAtiva() throws Exception {
 		mockMvc.perform(patch("/api/turmas/{turmaId}/agenda/atual/desativar", turmaAtiva.getId())
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin))
+				.with(autenticado()))
 				.andExpect(status().isNotFound());
 	}
 
@@ -180,7 +177,7 @@ class AulaControllerIT extends IntegrationTestSupport {
 		definirAgenda(turmaAtiva.getId(), tipoAula1, LocalDate.now());
 
 		mockMvc.perform(patch("/api/turmas/{turmaId}/agenda/atual/desativar", turmaAtiva.getId())
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin))
+				.with(autenticado()))
 				.andExpect(status().isNoContent());
 
 		definirAgenda(turmaAtiva.getId(), tipoAula1, LocalDate.now());
@@ -201,7 +198,7 @@ class AulaControllerIT extends IntegrationTestSupport {
 		definirAgenda(turmaAtiva.getId(), tipoAula1, LocalDate.now().minusDays(1));
 
 		mockMvc.perform(put("/api/turmas/{turmaId}/agenda", turmaAtiva.getId())
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin)
+				.with(autenticado())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{"itens": [{"tipoAulaId": "%s", "data": "%s"}]}
@@ -211,7 +208,7 @@ class AulaControllerIT extends IntegrationTestSupport {
 
 	private void definirAgenda(UUID turmaId, UUID tipoAulaId, LocalDate data) throws Exception {
 		mockMvc.perform(put("/api/turmas/{turmaId}/agenda", turmaId)
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin)
+				.with(autenticado())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{"itens": [{"tipoAulaId": "%s", "data": "%s"}]}

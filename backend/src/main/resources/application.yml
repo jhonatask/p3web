@@ -13,11 +13,13 @@ spring:
       ddl-auto: validate
   flyway:
     enabled: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${SUPABASE_JWK_SET_URI}
 
 app:
-  jwt:
-    secret: ${JWT_SECRET}
-    expiracao-minutos: ${JWT_EXPIRACAO_MINUTOS:60}
   chamada:
     base-url: ${CHAMADA_BASE_URL:http://localhost:3000/chamada}
   cors:

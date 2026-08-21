@@ -40,4 +40,7 @@ public class UsuarioAdmin {
 	@Column(nullable = false)
 	private Papel papel;
 
+	@Column(name = "pessoa_id", unique = true)
+	private UUID pessoaId;
+
 }
