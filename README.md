@@ -16,15 +16,20 @@ npm run dev
 
 Acesse `http://localhost:3000`.
 
-## Variável de ambiente
+## Variáveis de ambiente
 
 Copie `.env.local.example` para `.env.local` e ajuste se necessário:
 
 ```
 NEXT_PUBLIC_API_URL=http://localhost:8080
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
 ```
 
-Todas as chamadas ao backend usam essa variável (nunca há URL de backend hardcoded no código).
+Todas as chamadas ao backend usam `NEXT_PUBLIC_API_URL` (nunca há URL de backend hardcoded no
+código). O login (`/login`) é a exceção: vai direto no Supabase Auth com `NEXT_PUBLIC_SUPABASE_URL`
++ `NEXT_PUBLIC_SUPABASE_ANON_KEY`, e o backend só valida o token via JWKS — o P3 não emite nem
+guarda credencial.
 
 ## Rotas
 

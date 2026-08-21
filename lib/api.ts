@@ -39,6 +39,22 @@ function obterUrlBase(): string {
   return url;
 }
 
+function obterSupabaseUrl(): string {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!url) {
+    throw new Error("Variável de ambiente NEXT_PUBLIC_SUPABASE_URL não configurada");
+  }
+  return url;
+}
+
+function obterSupabaseAnonKey(): string {
+  const chave = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!chave) {
+    throw new Error("Variável de ambiente NEXT_PUBLIC_SUPABASE_ANON_KEY não configurada");
+  }
+  return chave;
+}
+
 async function tratarResposta<T>(resposta: Response): Promise<T> {
   if (resposta.ok) {
     return (await resposta.json()) as T;
@@ -222,21 +238,48 @@ export async function registrarAvaliacao(aulaId: string, dados: AvaliacaoRequest
 // Area logada do lider (autenticada)
 // ---------------------------------------------------------------------------
 
-export type Papel = "PROFESSOR" | "ADMIN" | "VISUALIZADOR";
-
 export type LoginResponse = {
-  token: string;
+  accessToken: string;
   nome: string;
-  papel: Papel;
 };
 
+type SupabaseTokenResponse = {
+  access_token: string;
+  user: {
+    email: string | null;
+    user_metadata?: { full_name?: string };
+  };
+};
+
+/**
+ * Login deixou de ser deste backend - vai direto no Supabase Auth (mesmo
+ * provedor que emite o token validado via JWKS no backend). O nome exibido
+ * vem do user_metadata (quando a conta tem full_name) ou do e-mail.
+ */
 export async function login(email: string, senha: string): Promise<LoginResponse> {
-  const resposta = await fetch(`${obterUrlBase()}/api/auth/login`, {
+  const resposta = await fetch(`${obterSupabaseUrl()}/auth/v1/token?grant_type=password`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, senha }),
+    headers: {
+      "Content-Type": "application/json",
+      apikey: obterSupabaseAnonKey(),
+    },
+    body: JSON.stringify({ email, password: senha }),
   });
-  return tratarResposta<LoginResponse>(resposta);
+
+  if (!resposta.ok) {
+    throw new ErroApi({
+      mensagem: "E-mail ou senha inválidos",
+      status: resposta.status,
+      timestamp: new Date().toISOString(),
+      erros: null,
+    });
+  }
+
+  const corpo = (await resposta.json()) as SupabaseTokenResponse;
+  return {
+    accessToken: corpo.access_token,
+    nome: corpo.user.user_metadata?.full_name ?? corpo.user.email ?? email,
+  };
 }
 
 export type Curso = {

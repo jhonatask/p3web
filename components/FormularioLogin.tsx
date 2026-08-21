@@ -21,7 +21,7 @@ export default function FormularioLogin() {
 
     try {
       const resultado = await login(email, senha);
-      salvarSessao(resultado.token, resultado.nome);
+      salvarSessao(resultado.accessToken, resultado.nome);
       router.push("/inicio");
     } catch (erroCapturado) {
       if (erroCapturado instanceof ErroApi) {
