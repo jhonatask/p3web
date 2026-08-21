@@ -72,6 +72,17 @@ public abstract class IntegrationTestSupport {
 		return authentication(new PessoaAuthenticationToken(principal, jwt, List.of()));
 	}
 
+	protected RequestPostProcessor autenticadoSemVinculo() {
+		String subDesconhecido = UUID.randomUUID().toString();
+		Jwt jwt = Jwt.withTokenValue("token-de-teste-sem-vinculo")
+				.header("alg", "none")
+				.subject(subDesconhecido)
+				.claim("sub", subDesconhecido)
+				.build();
+		PessoaPrincipal principal = new PessoaPrincipal(null, subDesconhecido);
+		return authentication(new PessoaAuthenticationToken(principal, jwt, List.of()));
+	}
+
 	/**
 	 * O curso "Escola de Hombridade" e seu catalogo de TipoAula sao dado de
 	 * referencia semeado pela migration V15 (nao dado de teste) - nunca

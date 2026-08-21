@@ -35,6 +35,11 @@ public class GlobalExceptionHandler {
 		return construirResposta(HttpStatus.UNAUTHORIZED, exception.getMessage());
 	}
 
+	@ExceptionHandler(ForbiddenException.class)
+	public ResponseEntity<ApiError> tratarForbidden(ForbiddenException exception) {
+		return construirResposta(HttpStatus.FORBIDDEN, exception.getMessage());
+	}
+
 	@ExceptionHandler(MethodArgumentNotValidException.class)
 	public ResponseEntity<ApiError> tratarArgumentoInvalido(MethodArgumentNotValidException exception) {
 		List<ApiError.CampoInvalido> erros = exception.getBindingResult().getFieldErrors().stream()

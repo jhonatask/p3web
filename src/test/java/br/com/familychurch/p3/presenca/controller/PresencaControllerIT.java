@@ -187,6 +187,23 @@ class PresencaControllerIT extends IntegrationTestSupport {
 				.andExpect(jsonPath("$.validadoPorNome").isNotEmpty());
 	}
 
+	@Test
+	void deveRetornar403QuandoValidadorNaoTemUsuarioAdminVinculado() throws Exception {
+		cadastrarParticipante(CPF_PARTICIPANTE, "Joao Silva");
+		Turma turma = criarTurmaComAulaAtivaHoje(1);
+		String aulaId = aulaRepository.findByTurmaId(turma.getId()).get(0).getId().toString();
+
+		mockMvc.perform(post("/api/aulas/{aulaId}/presencas/manual", aulaId)
+				.with(autenticadoSemVinculo())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"cpf": "%s"}
+						""".formatted(CPF_PARTICIPANTE)))
+				.andExpect(status().isForbidden());
+
+		assertThat(presencaRepository.count()).isEqualTo(0);
+	}
+
 	private void marcarPresencaManual(String aulaId, String cpf) throws Exception {
 		mockMvc.perform(post("/api/aulas/{aulaId}/presencas/manual", aulaId)
 				.with(autenticado())

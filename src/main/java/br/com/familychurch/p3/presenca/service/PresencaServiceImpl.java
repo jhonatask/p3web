@@ -18,9 +18,11 @@ import br.com.familychurch.p3.presenca.dto.MarcarPresencaManualRequest;
 import br.com.familychurch.p3.presenca.dto.PresencaResponse;
 import br.com.familychurch.p3.presenca.exception.AulaNaoEncontradaException;
 import br.com.familychurch.p3.presenca.exception.PresencaDuplicadaException;
+import br.com.familychurch.p3.presenca.exception.ValidadorNaoIdentificadoException;
 import br.com.familychurch.p3.presenca.repository.PresencaRepository;
 import br.com.familychurch.p3.turma.Turma;
 import br.com.familychurch.p3.turma.repository.TurmaRepository;
+import br.com.familychurch.p3.usuarioadmin.UsuarioAdmin;
 import br.com.familychurch.p3.usuarioadmin.repository.UsuarioAdminRepository;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -87,6 +89,7 @@ public class PresencaServiceImpl implements PresencaService {
 
 	@Override
 	public PresencaResponse marcarManual(UUID aulaId, MarcarPresencaManualRequest request, UUID pessoaId) {
+		UsuarioAdmin validador = buscarValidador(pessoaId);
 		Aula aula = buscarAulaPorId(aulaId);
 		Participante participante = buscarParticipantePorCpf(request.cpf());
 		validarPresencaInedita(participante.getId(), aula.getId());
@@ -100,9 +103,7 @@ public class PresencaServiceImpl implements PresencaService {
 		presenca.setTimestampCheckin(LocalDateTime.now());
 		presenca.setMetodo(MetodoPresenca.MANUAL);
 		presenca.setOrigem(origem);
-		if (pessoaId != null) {
-			usuarioAdminRepository.findByPessoaId(pessoaId).ifPresent(presenca::setValidadoPor);
-		}
+		presenca.setValidadoPor(validador);
 
 		return salvarEPublicar(presenca, matricula.getTurma().getNome());
 	}
@@ -134,6 +135,13 @@ public class PresencaServiceImpl implements PresencaService {
 		if (presencaRepository.existsByParticipanteIdAndAulaId(participanteId, aulaId)) {
 			throw new PresencaDuplicadaException(participanteId, aulaId);
 		}
+	}
+
+	private UsuarioAdmin buscarValidador(UUID pessoaId) {
+		if (pessoaId == null) {
+			throw new ValidadorNaoIdentificadoException();
+		}
+		return usuarioAdminRepository.findByPessoaId(pessoaId).orElseThrow(ValidadorNaoIdentificadoException::new);
 	}
 
 	private PresencaResponse salvarEPublicar(Presenca presenca, String turmaOrigemNome) {
