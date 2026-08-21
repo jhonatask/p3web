@@ -86,7 +86,7 @@ public class PresencaServiceImpl implements PresencaService {
 	}
 
 	@Override
-	public PresencaResponse marcarManual(UUID aulaId, MarcarPresencaManualRequest request, UUID professorId) {
+	public PresencaResponse marcarManual(UUID aulaId, MarcarPresencaManualRequest request, UUID pessoaId) {
 		Aula aula = buscarAulaPorId(aulaId);
 		Participante participante = buscarParticipantePorCpf(request.cpf());
 		validarPresencaInedita(participante.getId(), aula.getId());
@@ -100,7 +100,9 @@ public class PresencaServiceImpl implements PresencaService {
 		presenca.setTimestampCheckin(LocalDateTime.now());
 		presenca.setMetodo(MetodoPresenca.MANUAL);
 		presenca.setOrigem(origem);
-		presenca.setValidadoPor(usuarioAdminRepository.getReferenceById(professorId));
+		if (pessoaId != null) {
+			usuarioAdminRepository.findByPessoaId(pessoaId).ifPresent(presenca::setValidadoPor);
+		}
 
 		return salvarEPublicar(presenca, matricula.getTurma().getNome());
 	}

@@ -1,0 +1,11 @@
+-- Login deixa de ser local (JWT proprio) e passa a vir do Supabase Auth,
+-- validado via JWKS - identidade e papel agora sao do nucleo (core.pessoa /
+-- core.atribuicao), nao mais deste banco. pessoa_id e o elo entre a conta
+-- autenticada (resolvida por core.pessoa_da_conta) e o registro local de
+-- staff do P3 (usado, por ex., pra registrar quem validou uma chamada
+-- manual). Sem FK pra core.pessoa de proposito: o schema core nao existe no
+-- Postgres efemero dos testes de integracao (Testcontainers so aplica as
+-- migrations do p3) - integridade referencial cross-schema fica por conta
+-- da aplicacao, nao do banco, nesta tabela. Nullable porque contas ja
+-- existentes (semente local) ainda nao tem Pessoa vinculada no nucleo.
+alter table usuario_admin add column pessoa_id uuid unique;

@@ -24,7 +24,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -60,7 +59,6 @@ class FormaturaControllerIT extends IntegrationTestSupport {
 	@Autowired
 	private HistoricoItemRepository historicoItemRepository;
 
-	private String tokenAdmin;
 	private Turma turma;
 
 	@BeforeEach
@@ -72,7 +70,6 @@ class FormaturaControllerIT extends IntegrationTestSupport {
 		alunoRepository.deleteAll();
 		participanteRepository.deleteAll();
 		turmaRepository.deleteAll();
-		tokenAdmin = obterTokenAdmin();
 		turma = criarTurma(StatusTurma.ATIVA);
 	}
 
@@ -90,7 +87,7 @@ class FormaturaControllerIT extends IntegrationTestSupport {
 		}
 
 		mockMvc.perform(get("/api/turmas/{turmaId}/painel", turma.getId())
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin))
+				.with(autenticado()))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.linhas", org.hamcrest.Matchers.hasSize(1)))
 				.andExpect(jsonPath("$.linhas[0].nome").value("Pedro Alves"))
@@ -107,7 +104,7 @@ class FormaturaControllerIT extends IntegrationTestSupport {
 		var participanteId = participanteRepository.findByCpf(CPF_COM_FALTA).orElseThrow().getId();
 
 		mockMvc.perform(get("/api/turmas/{turmaId}/painel/{participanteId}/link-whatsapp", turma.getId(), participanteId)
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin))
+				.with(autenticado()))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.link", org.hamcrest.Matchers.containsString("https://wa.me/5511988887777")));
 	}
@@ -121,7 +118,7 @@ class FormaturaControllerIT extends IntegrationTestSupport {
 		var participanteId = participanteRepository.findByCpf(CPF_COMPLETO).orElseThrow().getId();
 
 		mockMvc.perform(get("/api/turmas/{turmaId}/painel/{participanteId}/link-whatsapp", turma.getId(), participanteId)
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin))
+				.with(autenticado()))
 				.andExpect(status().isBadRequest());
 	}
 
@@ -131,7 +128,7 @@ class FormaturaControllerIT extends IntegrationTestSupport {
 		definirAgenda(obterTipoAulaPorNumero(2), LocalDate.now().plusDays(7));
 
 		mockMvc.perform(patch("/api/turmas/{turmaId}/agenda/atual/encerrar", turma.getId())
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin))
+				.with(autenticado()))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.numero").value(2))
 				.andExpect(jsonPath("$.status").value("ATIVA"));
@@ -142,7 +139,7 @@ class FormaturaControllerIT extends IntegrationTestSupport {
 		definirAgenda(obterTipoAulaPorNumero(1), LocalDate.now());
 
 		mockMvc.perform(patch("/api/turmas/{turmaId}/agenda/atual/encerrar", turma.getId())
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin))
+				.with(autenticado()))
 				.andExpect(status().isNoContent());
 	}
 
@@ -151,7 +148,7 @@ class FormaturaControllerIT extends IntegrationTestSupport {
 		String aulaId = aulaRepository.findByTurmaIdAndTipoAulaId(turma.getId(), obterTipoAulaPorNumero(numeroTipoAula))
 				.orElseThrow().getId().toString();
 		mockMvc.perform(post("/api/aulas/{aulaId}/presencas/manual", aulaId)
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin)
+				.with(autenticado())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{"cpf": "%s"}
@@ -161,7 +158,7 @@ class FormaturaControllerIT extends IntegrationTestSupport {
 
 	private void definirAgenda(UUID tipoAulaId, LocalDate data) throws Exception {
 		mockMvc.perform(put("/api/turmas/{turmaId}/agenda", turma.getId())
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin)
+				.with(autenticado())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{"itens": [{"tipoAulaId": "%s", "data": "%s"}]}

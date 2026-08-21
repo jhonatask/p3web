@@ -1,6 +1,6 @@
 package br.com.familychurch.p3.presenca.controller;
 
-import br.com.familychurch.p3.auth.UsuarioAdminDetails;
+import br.com.familychurch.p3.auth.PessoaPrincipal;
 import br.com.familychurch.p3.presenca.dto.ChamadaRequest;
 import br.com.familychurch.p3.presenca.dto.MarcarPresencaManualRequest;
 import br.com.familychurch.p3.presenca.dto.PresencaResponse;
@@ -41,8 +41,8 @@ public class PresencaController {
 	public ResponseEntity<PresencaResponse> marcarManual(
 			@PathVariable UUID aulaId,
 			@Valid @RequestBody MarcarPresencaManualRequest request,
-			@AuthenticationPrincipal UsuarioAdminDetails principal) {
-		PresencaResponse response = presencaService.marcarManual(aulaId, request, principal.getUsuarioAdmin().getId());
+			@AuthenticationPrincipal PessoaPrincipal principal) {
+		PresencaResponse response = presencaService.marcarManual(aulaId, request, principal.pessoaId());
 		return ResponseEntity.status(201).body(response);
 	}
 

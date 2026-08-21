@@ -22,7 +22,6 @@ import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -58,10 +57,8 @@ class PresencaControllerIT extends IntegrationTestSupport {
 	@Autowired
 	private HistoricoItemRepository historicoItemRepository;
 
-	private String tokenAdmin;
-
 	@BeforeEach
-	void configurarCenario() throws Exception {
+	void configurarCenario() {
 		historicoItemRepository.deleteAll();
 		avaliacaoRepository.deleteAll();
 		presencaRepository.deleteAll();
@@ -69,7 +66,6 @@ class PresencaControllerIT extends IntegrationTestSupport {
 		alunoRepository.deleteAll();
 		participanteRepository.deleteAll();
 		turmaRepository.deleteAll();
-		tokenAdmin = obterTokenAdmin();
 	}
 
 	@Test
@@ -181,7 +177,7 @@ class PresencaControllerIT extends IntegrationTestSupport {
 		String aulaId = aulaRepository.findByTurmaId(turma.getId()).get(0).getId().toString();
 
 		mockMvc.perform(post("/api/aulas/{aulaId}/presencas/manual", aulaId)
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin)
+				.with(autenticado())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{"cpf": "%s"}
@@ -193,7 +189,7 @@ class PresencaControllerIT extends IntegrationTestSupport {
 
 	private void marcarPresencaManual(String aulaId, String cpf) throws Exception {
 		mockMvc.perform(post("/api/aulas/{aulaId}/presencas/manual", aulaId)
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin)
+				.with(autenticado())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{"cpf": "%s"}
@@ -211,7 +207,7 @@ class PresencaControllerIT extends IntegrationTestSupport {
 
 	private void definirAgenda(java.util.UUID turmaId, java.util.UUID tipoAulaId, LocalDate data) throws Exception {
 		mockMvc.perform(put("/api/turmas/{turmaId}/agenda", turmaId)
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin)
+				.with(autenticado())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{"itens": [{"tipoAulaId": "%s", "data": "%s"}]}

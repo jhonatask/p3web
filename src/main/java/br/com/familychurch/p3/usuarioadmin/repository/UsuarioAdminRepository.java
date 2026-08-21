@@ -9,4 +9,6 @@ public interface UsuarioAdminRepository extends JpaRepository<UsuarioAdmin, UUID
 
 	Optional<UsuarioAdmin> findByEmailIgnoreCase(String email);
 
+	Optional<UsuarioAdmin> findByPessoaId(UUID pessoaId);
+
 }

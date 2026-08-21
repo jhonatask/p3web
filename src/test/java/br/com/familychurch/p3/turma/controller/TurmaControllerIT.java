@@ -20,7 +20,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -47,16 +46,13 @@ class TurmaControllerIT extends IntegrationTestSupport {
 	@Autowired
 	private AvaliacaoRepository avaliacaoRepository;
 
-	private String tokenAdmin;
-
 	@BeforeEach
-	void configurarCenario() throws Exception {
+	void configurarCenario() {
 		avaliacaoRepository.deleteAll();
 		presencaRepository.deleteAll();
 		aulaRepository.deleteAll();
 		alunoRepository.deleteAll();
 		turmaRepository.deleteAll();
-		tokenAdmin = obterTokenAdmin();
 	}
 
 	@Test
@@ -64,7 +60,7 @@ class TurmaControllerIT extends IntegrationTestSupport {
 		UUID cursoId = obterCursoEscolaHombridade();
 
 		mockMvc.perform(post("/api/turmas")
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin)
+				.with(autenticado())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{"cursoId": "%s", "nome": "Campus 85 - Turma 13", "moduloAtual": "Provisao"}
@@ -81,7 +77,7 @@ class TurmaControllerIT extends IntegrationTestSupport {
 		UUID cursoInexistente = UUID.randomUUID();
 
 		mockMvc.perform(post("/api/turmas")
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin)
+				.with(autenticado())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{"cursoId": "%s", "nome": "Turma qualquer"}
@@ -93,10 +89,10 @@ class TurmaControllerIT extends IntegrationTestSupport {
 	void deveRetornar409QuandoCursoInativo() throws Exception {
 		UUID cursoId = criarCursoAtivo("Curso a desativar");
 		mockMvc.perform(patch("/api/cursos/{id}/desativar", cursoId)
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin));
+				.with(autenticado()));
 
 		mockMvc.perform(post("/api/turmas")
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin)
+				.with(autenticado())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{"cursoId": "%s", "nome": "Turma sobre curso inativo"}
@@ -110,10 +106,10 @@ class TurmaControllerIT extends IntegrationTestSupport {
 		String idTurmaEncerrada = criarTurma(cursoId, "Turma a encerrar");
 		criarTurma(cursoId, "Turma ativa");
 		mockMvc.perform(patch("/api/turmas/{id}/encerrar", idTurmaEncerrada)
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin));
+				.with(autenticado()));
 
 		mockMvc.perform(get("/api/turmas").param("status", "ATIVA")
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin))
+				.with(autenticado()))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$", hasSize(1)))
 				.andExpect(jsonPath("$[0].nome").value("Turma ativa"));
@@ -125,7 +121,7 @@ class TurmaControllerIT extends IntegrationTestSupport {
 		String turmaId = criarTurma(cursoId, "Turma a encerrar");
 
 		mockMvc.perform(patch("/api/turmas/{id}/encerrar", turmaId)
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin))
+				.with(autenticado()))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.status").value("ENCERRADA"));
 	}
@@ -136,7 +132,7 @@ class TurmaControllerIT extends IntegrationTestSupport {
 		String turmaId = criarTurma(cursoId, "Turma sem aulas");
 
 		mockMvc.perform(get("/api/turmas/{turmaId}/dashboard", turmaId)
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin))
+				.with(autenticado()))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.totalAulas").value(0))
 				.andExpect(jsonPath("$.frequenciaMedia").value(0))
@@ -149,7 +145,7 @@ class TurmaControllerIT extends IntegrationTestSupport {
 		UUID turmaInexistente = UUID.randomUUID();
 
 		mockMvc.perform(get("/api/turmas/{turmaId}/dashboard", turmaInexistente)
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin))
+				.with(autenticado()))
 				.andExpect(status().isNotFound());
 	}
 
@@ -162,7 +158,7 @@ class TurmaControllerIT extends IntegrationTestSupport {
 
 	private String criarTurma(UUID cursoId, String nome) throws Exception {
 		var resultado = mockMvc.perform(post("/api/turmas")
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin)
+				.with(autenticado())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{"cursoId": "%s", "nome": "%s"}

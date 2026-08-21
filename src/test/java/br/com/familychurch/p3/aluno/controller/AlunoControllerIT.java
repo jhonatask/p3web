@@ -23,7 +23,6 @@ import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -63,7 +62,6 @@ class AlunoControllerIT extends IntegrationTestSupport {
 	@Autowired
 	private HistoricoItemRepository historicoItemRepository;
 
-	private String tokenAdmin;
 	private Turma turmaAtiva;
 
 	@BeforeEach
@@ -75,7 +73,6 @@ class AlunoControllerIT extends IntegrationTestSupport {
 		alunoRepository.deleteAll();
 		participanteRepository.deleteAll();
 		turmaRepository.deleteAll();
-		tokenAdmin = obterTokenAdmin();
 		turmaAtiva = criarTurma(StatusTurma.ATIVA);
 	}
 
@@ -89,7 +86,7 @@ class AlunoControllerIT extends IntegrationTestSupport {
 	void deveListarAlunosDaTurmaComTokenValido() throws Exception {
 		cadastrarParticipante(CPF_VALIDO, "Joao Silva");
 		mockMvc.perform(put("/api/turmas/{turmaId}/agenda", turmaAtiva.getId())
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin)
+				.with(autenticado())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{"itens": [{"tipoAulaId": "%s", "data": "%s"}]}
@@ -101,7 +98,7 @@ class AlunoControllerIT extends IntegrationTestSupport {
 						""".formatted(CPF_VALIDO)));
 
 		mockMvc.perform(get("/api/turmas/{turmaId}/alunos", turmaAtiva.getId())
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenAdmin))
+				.with(autenticado()))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$", hasSize(1)))
 				.andExpect(jsonPath("$[0].cpf").value(CPF_VALIDO));
