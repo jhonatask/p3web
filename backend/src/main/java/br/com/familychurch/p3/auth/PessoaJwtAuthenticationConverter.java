@@ -7,12 +7,6 @@ import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 
-/**
- * Roda uma vez por requisicao, quando o resource server ja validou a
- * assinatura do JWT (JWKS) - resolve o pessoa_id aqui pra nao precisar de
- * ida ao banco a cada acao dentro da requisicao (core.pessoa_da_conta so e
- * chamada nesse ponto). O "sub" usado e sempre o do token ja validado.
- */
 @Component
 public class PessoaJwtAuthenticationConverter implements Converter<Jwt, AbstractAuthenticationToken> {
 
