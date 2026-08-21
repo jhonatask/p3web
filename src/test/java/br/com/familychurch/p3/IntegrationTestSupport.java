@@ -29,13 +29,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @Testcontainers
 public abstract class IntegrationTestSupport {
 
-	/**
-	 * sub/pessoa_id fixos simulando uma conta ja resolvida pelo
-	 * PessoaJwtAuthenticationConverter - os testes injetam a Authentication
-	 * pronta (ver autenticado()) em vez de decodificar JWT de verdade ou
-	 * chamar core.pessoa_da_conta, ja que o schema core nao existe no Postgres
-	 * efemero do Testcontainers.
-	 */
 	protected static final String SUB_ADMIN_SEMENTE = "11111111-1111-1111-1111-111111111111";
 	protected static final UUID PESSOA_ID_ADMIN_SEMENTE = UUID.fromString("22222222-2222-2222-2222-222222222222");
 	protected static final UUID ID_ADMIN_SEMENTE = UUID.fromString("ca287c71-0602-4690-a88a-b8047c997723");
@@ -59,11 +52,6 @@ public abstract class IntegrationTestSupport {
 		POSTGRES.start();
 	}
 
-	/**
-	 * Vincula o admin semente (V4) ao pessoa_id fixo de teste, pra
-	 * marcarManual resolver validadoPor via usuarioAdminRepository.findByPessoaId.
-	 * Em ambiente real esse vinculo vem do nucleo, nao e feito pela aplicacao.
-	 */
 	@BeforeEach
 	void vincularPessoaAoAdminSemente() {
 		usuarioAdminRepository.findById(ID_ADMIN_SEMENTE).ifPresent(admin -> {

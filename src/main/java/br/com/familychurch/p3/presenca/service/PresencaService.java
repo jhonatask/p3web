@@ -17,11 +17,6 @@ public interface PresencaService {
 	 */
 	PresencaResponse registrarChamada(String tokenTurma, ChamadaRequest request);
 
-	/**
-	 * @param pessoaId pessoa_id de quem esta validando (do principal autenticado);
-	 * pode ser null (conta sem Pessoa vinculada ainda) ou nao corresponder a
-	 * nenhum UsuarioAdmin local - nesses casos validadoPor fica em branco.
-	 */
 	PresencaResponse marcarManual(UUID aulaId, MarcarPresencaManualRequest request, UUID pessoaId);
 
 	List<PresencaResponse> listarPorAula(UUID aulaId);
