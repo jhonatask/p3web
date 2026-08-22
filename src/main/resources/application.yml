@@ -18,6 +18,7 @@ spring:
       resourceserver:
         jwt:
           jwk-set-uri: ${SUPABASE_JWK_SET_URI}
+          jws-algorithms: ES256
 
 app:
   chamada:

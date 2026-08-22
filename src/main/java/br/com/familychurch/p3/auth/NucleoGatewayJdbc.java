@@ -17,13 +17,13 @@ public class NucleoGatewayJdbc implements NucleoGateway {
 
 	@Override
 	public Optional<UUID> pessoaDaConta(String sub) {
-		UUID pessoaId = jdbcTemplate.queryForObject("select core.pessoa_da_conta(?)", UUID.class, sub);
+		UUID pessoaId = jdbcTemplate.queryForObject("select core.pessoa_da_conta(?::uuid)", UUID.class, sub);
 		return Optional.ofNullable(pessoaId);
 	}
 
 	@Override
 	public List<String> papeisDaConta(String sub) {
-		return jdbcTemplate.queryForList("select * from core.papeis_da_conta(?)", String.class, sub);
+		return jdbcTemplate.queryForList("select papel from core.papeis_da_conta(?::uuid)", String.class, sub);
 	}
 
 }
