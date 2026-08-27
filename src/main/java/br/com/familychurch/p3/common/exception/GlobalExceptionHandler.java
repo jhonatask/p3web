@@ -9,6 +9,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -38,6 +39,11 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(ForbiddenException.class)
 	public ResponseEntity<ApiError> tratarForbidden(ForbiddenException exception) {
 		return construirResposta(HttpStatus.FORBIDDEN, exception.getMessage());
+	}
+
+	@ExceptionHandler(NoResourceFoundException.class)
+	public ResponseEntity<ApiError> tratarRecursoNaoEncontrado(NoResourceFoundException exception) {
+		return construirResposta(HttpStatus.NOT_FOUND, "Recurso nao encontrado");
 	}
 
 	@ExceptionHandler(MethodArgumentNotValidException.class)
