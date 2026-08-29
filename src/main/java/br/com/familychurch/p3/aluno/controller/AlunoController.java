@@ -29,7 +29,7 @@ public class AlunoController {
 
 	@PostMapping("/api/publico/turmas/{turmaId}/matricula")
 	public MatriculaResponse matricular(@PathVariable UUID turmaId, @Valid @RequestBody MatriculaRequest request) {
-		return alunoService.matricularDireto(request.cpf(), turmaId);
+		return alunoService.matricularDireto(request.cpf(), request.token(), turmaId);
 	}
 
 }

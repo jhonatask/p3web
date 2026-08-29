@@ -3,6 +3,7 @@ package br.com.familychurch.p3.aluno.service;
 import br.com.familychurch.p3.aluno.Aluno;
 import br.com.familychurch.p3.aluno.dto.AlunoResponse;
 import br.com.familychurch.p3.aluno.dto.MatriculaResponse;
+import br.com.familychurch.p3.aluno.exception.TokenMatriculaInvalidoException;
 import br.com.familychurch.p3.aluno.exception.TurmaNaoAceitaMatriculaException;
 import br.com.familychurch.p3.aluno.repository.AlunoRepository;
 import br.com.familychurch.p3.participante.Participante;
@@ -51,10 +52,11 @@ public class AlunoServiceImpl implements AlunoService {
 	}
 
 	@Override
-	public MatriculaResponse matricularDireto(String cpf, UUID turmaId) {
+	public MatriculaResponse matricularDireto(String cpf, String token, UUID turmaId) {
 		String cpfLimpo = cpf.replaceAll("\\D", "");
 		Participante participante = participanteRepository.findByCpf(cpfLimpo)
 				.orElseThrow(() -> new ParticipanteNaoEncontradoException(cpfLimpo));
+		validarTokenMatricula(participante, token);
 		if (!turmaService.aceitaMatriculaDireta(turmaId)) {
 			throw new TurmaNaoAceitaMatriculaException(turmaId);
 		}
@@ -62,6 +64,16 @@ public class AlunoServiceImpl implements AlunoService {
 		boolean jaEstavaMatriculado = alunoRepository.findByParticipanteId(participante.getId()).isPresent();
 		Aluno matricula = matricularSeNecessario(participante.getId(), turmaId);
 		return new MatriculaResponse(matricula.getTurma().getId(), matricula.getTurma().getNome(), jaEstavaMatriculado);
+	}
+
+	private void validarTokenMatricula(Participante participante, String token) {
+		String tokenEsperado = participante.getTokenMatricula();
+		LocalDateTime expiraEm = participante.getTokenMatriculaExpiraEm();
+		boolean valido = tokenEsperado != null && tokenEsperado.equals(token)
+				&& expiraEm != null && expiraEm.isAfter(LocalDateTime.now());
+		if (!valido) {
+			throw new TokenMatriculaInvalidoException();
+		}
 	}
 
 }

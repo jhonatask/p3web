@@ -4,7 +4,7 @@ import br.com.familychurch.p3.participante.dto.ParticipanteCadastroRequest;
 import br.com.familychurch.p3.participante.dto.ParticipanteCadastroResponse;
 import br.com.familychurch.p3.participante.dto.ParticipanteEdicaoResponse;
 import br.com.familychurch.p3.participante.dto.ParticipanteResponse;
-import br.com.familychurch.p3.participante.dto.ParticipanteResumoResponse;
+import br.com.familychurch.p3.participante.dto.SolicitarAtualizacaoRequest;
 import br.com.familychurch.p3.participante.service.ParticipanteService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -34,14 +35,15 @@ public class ParticipanteController {
 		return participanteService.buscarPorCpf(cpf);
 	}
 
-	@GetMapping("/api/publico/participantes/{cpf}/resumo")
-	public ParticipanteResumoResponse buscarResumoPorCpf(@PathVariable String cpf) {
-		return participanteService.buscarResumoPorCpf(cpf);
+	@PostMapping("/api/publico/participantes/solicitar-atualizacao")
+	public ResponseEntity<Void> solicitarAtualizacaoCadastro(@Valid @RequestBody SolicitarAtualizacaoRequest request) {
+		participanteService.solicitarAtualizacaoCadastro(request.cpf());
+		return ResponseEntity.ok().build();
 	}
 
-	@GetMapping("/api/publico/participantes/{cpf}/cadastro")
-	public ParticipanteEdicaoResponse buscarParaEdicaoPorCpf(@PathVariable String cpf) {
-		return participanteService.buscarParaEdicaoPorCpf(cpf);
+	@GetMapping("/api/publico/participantes/cadastro")
+	public ParticipanteEdicaoResponse buscarParaEdicaoPorToken(@RequestParam String token) {
+		return participanteService.buscarParaEdicaoPorToken(token);
 	}
 
 }

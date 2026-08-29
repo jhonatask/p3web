@@ -7,12 +7,15 @@ public record ParticipanteCadastroResponse(
 
 		UUID id,
 		String nome,
-		String cpf
+		String cpf,
+		String tokenMatricula
 
 ) {
 
 	public static ParticipanteCadastroResponse from(Participante participante) {
-		return new ParticipanteCadastroResponse(participante.getId(), participante.getNome(), participante.getCpf());
+		return new ParticipanteCadastroResponse(
+				participante.getId(), participante.getNome(), participante.getCpf(),
+				participante.getTokenMatricula());
 	}
 
 }

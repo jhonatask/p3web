@@ -105,4 +105,16 @@ public class Participante {
 	@Column(name = "consentimento_lgpd_timestamp")
 	private LocalDateTime consentimentoLgpdTimestamp;
 
+	@Column(name = "token_matricula")
+	private String tokenMatricula;
+
+	@Column(name = "token_matricula_expira_em")
+	private LocalDateTime tokenMatriculaExpiraEm;
+
+	@Column(name = "token_atualizacao")
+	private String tokenAtualizacao;
+
+	@Column(name = "token_atualizacao_expira_em")
+	private LocalDateTime tokenAtualizacaoExpiraEm;
+
 }

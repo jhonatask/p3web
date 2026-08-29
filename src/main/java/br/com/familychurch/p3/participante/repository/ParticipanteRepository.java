@@ -11,4 +11,6 @@ public interface ParticipanteRepository extends JpaRepository<Participante, UUID
 
 	boolean existsByCpf(String cpf);
 
+	Optional<Participante> findByTokenAtualizacao(String tokenAtualizacao);
+
 }

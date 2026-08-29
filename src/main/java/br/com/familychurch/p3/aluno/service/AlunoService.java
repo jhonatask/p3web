@@ -23,6 +23,6 @@ public interface AlunoService {
 	 * o link de uma aula. So aceita turmas que ainda nao comecaram (ver
 	 * {@link br.com.familychurch.p3.turma.service.TurmaService#aceitaMatriculaDireta}).
 	 */
-	MatriculaResponse matricularDireto(String cpf, UUID turmaId);
+	MatriculaResponse matricularDireto(String cpf, String token, UUID turmaId);
 
 }

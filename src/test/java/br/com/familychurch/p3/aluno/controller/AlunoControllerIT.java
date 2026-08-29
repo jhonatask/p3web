@@ -14,12 +14,14 @@ import br.com.familychurch.p3.avaliacao.repository.AvaliacaoRepository;
 import br.com.familychurch.p3.curso.Curso;
 import br.com.familychurch.p3.curso.repository.CursoRepository;
 import br.com.familychurch.p3.historico.repository.HistoricoItemRepository;
+import br.com.familychurch.p3.participante.Participante;
 import br.com.familychurch.p3.participante.repository.ParticipanteRepository;
 import br.com.familychurch.p3.presenca.repository.PresencaRepository;
 import br.com.familychurch.p3.turma.StatusTurma;
 import br.com.familychurch.p3.turma.Turma;
 import br.com.familychurch.p3.turma.repository.TurmaRepository;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -104,14 +106,55 @@ class AlunoControllerIT extends IntegrationTestSupport {
 				.andExpect(jsonPath("$[0].cpf").value(CPF_VALIDO));
 	}
 
-	private void cadastrarParticipante(String cpf, String nome) throws Exception {
-		mockMvc.perform(post("/api/publico/participantes")
+	@Test
+	void deveMatricularDiretoComTokenValido() throws Exception {
+		String token = cadastrarParticipante(CPF_VALIDO, "Joao Silva");
+
+		mockMvc.perform(post("/api/publico/turmas/{turmaId}/matricula", turmaAtiva.getId())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"cpf": "%s", "token": "%s"}
+						""".formatted(CPF_VALIDO, token)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.turmaId").value(turmaAtiva.getId().toString()));
+	}
+
+	@Test
+	void deveRetornar403AoMatricularComTokenInvalido() throws Exception {
+		cadastrarParticipante(CPF_VALIDO, "Joao Silva");
+
+		mockMvc.perform(post("/api/publico/turmas/{turmaId}/matricula", turmaAtiva.getId())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"cpf": "%s", "token": "TOKEN-ERRADO"}
+						""".formatted(CPF_VALIDO)))
+				.andExpect(status().isForbidden());
+	}
+
+	@Test
+	void deveRetornar403AoMatricularComTokenExpirado() throws Exception {
+		String token = cadastrarParticipante(CPF_VALIDO, "Joao Silva");
+		Participante participante = participanteRepository.findByCpf(CPF_VALIDO).orElseThrow();
+		participante.setTokenMatriculaExpiraEm(LocalDateTime.now().minusMinutes(1));
+		participanteRepository.save(participante);
+
+		mockMvc.perform(post("/api/publico/turmas/{turmaId}/matricula", turmaAtiva.getId())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"cpf": "%s", "token": "%s"}
+						""".formatted(CPF_VALIDO, token)))
+				.andExpect(status().isForbidden());
+	}
+
+	private String cadastrarParticipante(String cpf, String nome) throws Exception {
+		var resultado = mockMvc.perform(post("/api/publico/participantes")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{
 						  "nome": "%s",
 						  "cpf": "%s",
 						  "celular": "62999998888",
+						  "email": "joao@example.com",
 						  "dataNascimento": "1990-05-20",
 						  "estadoCivil": "SOLTEIRO",
 						  "temFilhos": false,
@@ -127,7 +170,9 @@ class AlunoControllerIT extends IntegrationTestSupport {
 						  "participaGc": false,
 						  "aceiteLgpd": true
 						}
-						""".formatted(nome, cpf)));
+						""".formatted(nome, cpf)))
+				.andReturn();
+		return objectMapper.readTree(resultado.getResponse().getContentAsString()).get("tokenMatricula").asText();
 	}
 
 	private Turma criarTurma(StatusTurma status) {

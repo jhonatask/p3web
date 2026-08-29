@@ -83,7 +83,9 @@ public record ParticipanteCadastroRequest(
 
 		Set<String> quaisGcs,
 
-		boolean aceiteLgpd
+		boolean aceiteLgpd,
+
+		String token
 
 ) {
 }
