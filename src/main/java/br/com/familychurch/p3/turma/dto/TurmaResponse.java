@@ -13,7 +13,9 @@ public record TurmaResponse(
 		String moduloAtual,
 		String tokenCadastro,
 		String linkCadastro,
-		StatusTurma status
+		StatusTurma status,
+		UUID liderId,
+		String liderNome
 
 ) {
 
@@ -27,7 +29,9 @@ public record TurmaResponse(
 				turma.getModuloAtual(),
 				turma.getTokenCadastro(),
 				link,
-				turma.getStatus());
+				turma.getStatus(),
+				turma.getLider() != null ? turma.getLider().getId() : null,
+				turma.getLider() != null ? turma.getLider().getNome() : null);
 	}
 
 }

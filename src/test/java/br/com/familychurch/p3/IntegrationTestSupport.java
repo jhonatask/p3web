@@ -2,6 +2,7 @@ package br.com.familychurch.p3;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 
+import br.com.familychurch.p3.auth.PapelComEscopo;
 import br.com.familychurch.p3.auth.PessoaAuthenticationToken;
 import br.com.familychurch.p3.auth.PessoaPrincipal;
 import br.com.familychurch.p3.aula.repository.TipoAulaRepository;
@@ -63,23 +64,31 @@ public abstract class IntegrationTestSupport {
 	}
 
 	protected RequestPostProcessor autenticado() {
-		Jwt jwt = Jwt.withTokenValue("token-de-teste")
-				.header("alg", "none")
-				.subject(SUB_ADMIN_SEMENTE)
-				.claim("sub", SUB_ADMIN_SEMENTE)
-				.build();
-		PessoaPrincipal principal = new PessoaPrincipal(PESSOA_ID_ADMIN_SEMENTE, SUB_ADMIN_SEMENTE);
-		return authentication(new PessoaAuthenticationToken(principal, jwt, List.of()));
+		return autenticadoComo(PESSOA_ID_ADMIN_SEMENTE, SUB_ADMIN_SEMENTE, List.of());
 	}
 
 	protected RequestPostProcessor autenticadoSemVinculo() {
 		String subDesconhecido = UUID.randomUUID().toString();
-		Jwt jwt = Jwt.withTokenValue("token-de-teste-sem-vinculo")
+		return autenticadoComo(null, subDesconhecido, List.of());
+	}
+
+	protected RequestPostProcessor autenticadoComoLiderSemEscopo(UUID pessoaId) {
+		return autenticadoComo(pessoaId, UUID.randomUUID().toString(),
+				List.of(new PapelComEscopo("lider_p3", null, null)));
+	}
+
+	protected RequestPostProcessor autenticadoComoLiderComEscopo(UUID pessoaId, String scopeId) {
+		return autenticadoComo(pessoaId, UUID.randomUUID().toString(),
+				List.of(new PapelComEscopo("lider_p3", "campus", scopeId)));
+	}
+
+	private RequestPostProcessor autenticadoComo(UUID pessoaId, String sub, List<PapelComEscopo> papeis) {
+		Jwt jwt = Jwt.withTokenValue("token-de-teste")
 				.header("alg", "none")
-				.subject(subDesconhecido)
-				.claim("sub", subDesconhecido)
+				.subject(sub)
+				.claim("sub", sub)
 				.build();
-		PessoaPrincipal principal = new PessoaPrincipal(null, subDesconhecido);
+		PessoaPrincipal principal = new PessoaPrincipal(pessoaId, sub, papeis);
 		return authentication(new PessoaAuthenticationToken(principal, jwt, List.of()));
 	}
 

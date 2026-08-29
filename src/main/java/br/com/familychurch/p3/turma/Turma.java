@@ -1,6 +1,7 @@
 package br.com.familychurch.p3.turma;
 
 import br.com.familychurch.p3.curso.Curso;
+import br.com.familychurch.p3.usuarioadmin.UsuarioAdmin;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -47,5 +48,9 @@ public class Turma {
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
 	private StatusTurma status = StatusTurma.ATIVA;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "lider_id")
+	private UsuarioAdmin lider;
 
 }

@@ -23,12 +23,15 @@ public class PessoaJwtAuthenticationConverter implements Converter<Jwt, Abstract
 	public AbstractAuthenticationToken convert(Jwt jwt) {
 		String sub = jwt.getSubject();
 		UUID pessoaId = nucleoGateway.pessoaDaConta(sub).orElse(null);
-		PessoaPrincipal principal = new PessoaPrincipal(pessoaId, sub);
-		return new PessoaAuthenticationToken(principal, jwt, resolverAuthorities(sub));
+		List<PapelComEscopo> papeis = nucleoGateway.papeisDaConta(sub);
+		PessoaPrincipal principal = new PessoaPrincipal(pessoaId, sub, papeis);
+		return new PessoaAuthenticationToken(principal, jwt, resolverAuthorities(papeis));
 	}
 
-	private List<GrantedAuthority> resolverAuthorities(String sub) {
-		return nucleoGateway.papeisDaConta(sub).stream()
+	private List<GrantedAuthority> resolverAuthorities(List<PapelComEscopo> papeis) {
+		return papeis.stream()
+				.map(PapelComEscopo::papel)
+				.distinct()
 				.map(papel -> new SimpleGrantedAuthority("ROLE_" + papel.toUpperCase(Locale.ROOT)))
 				.map(GrantedAuthority.class::cast)
 				.toList();

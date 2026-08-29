@@ -8,6 +8,6 @@ public interface NucleoGateway {
 
 	Optional<UUID> pessoaDaConta(String sub);
 
-	List<String> papeisDaConta(String sub);
+	List<PapelComEscopo> papeisDaConta(String sub);
 
 }

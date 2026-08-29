@@ -17,9 +17,13 @@ import br.com.familychurch.p3.turma.dto.TurmaPublicaResponse;
 import br.com.familychurch.p3.turma.dto.TurmaRequest;
 import br.com.familychurch.p3.turma.dto.TurmaResponse;
 import br.com.familychurch.p3.turma.exception.CursoInativoException;
+import br.com.familychurch.p3.turma.exception.LiderNaoEncontradoException;
 import br.com.familychurch.p3.turma.exception.TurmaEncerradaException;
+import br.com.familychurch.p3.turma.exception.TurmaForaDoEscopoException;
 import br.com.familychurch.p3.turma.exception.TurmaNaoEncontradaException;
 import br.com.familychurch.p3.turma.repository.TurmaRepository;
+import br.com.familychurch.p3.usuarioadmin.UsuarioAdmin;
+import br.com.familychurch.p3.usuarioadmin.repository.UsuarioAdminRepository;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.WriterException;
 import com.google.zxing.common.BitMatrix;
@@ -53,18 +57,21 @@ public class TurmaServiceImpl implements TurmaService {
 	private final PresencaRepository presencaRepository;
 	private final AlunoRepository alunoRepository;
 	private final AvaliacaoRepository avaliacaoRepository;
+	private final UsuarioAdminRepository usuarioAdminRepository;
 	private final String baseUrlChamada;
 	private final SecureRandom secureRandom = new SecureRandom();
 
 	public TurmaServiceImpl(TurmaRepository turmaRepository, CursoRepository cursoRepository,
 			AulaRepository aulaRepository, PresencaRepository presencaRepository, AlunoRepository alunoRepository,
-			AvaliacaoRepository avaliacaoRepository, @Value("${app.chamada.base-url}") String baseUrlChamada) {
+			AvaliacaoRepository avaliacaoRepository, UsuarioAdminRepository usuarioAdminRepository,
+			@Value("${app.chamada.base-url}") String baseUrlChamada) {
 		this.turmaRepository = turmaRepository;
 		this.cursoRepository = cursoRepository;
 		this.aulaRepository = aulaRepository;
 		this.presencaRepository = presencaRepository;
 		this.alunoRepository = alunoRepository;
 		this.avaliacaoRepository = avaliacaoRepository;
+		this.usuarioAdminRepository = usuarioAdminRepository;
 		this.baseUrlChamada = baseUrlChamada;
 	}
 
@@ -78,13 +85,16 @@ public class TurmaServiceImpl implements TurmaService {
 		turma.setModuloAtual(request.moduloAtual());
 		turma.setTokenCadastro(gerarTokenCadastroUnico());
 		turma.setStatus(StatusTurma.ATIVA);
+		if (request.liderId() != null) {
+			turma.setLider(buscarLider(request.liderId()));
+		}
 
 		return toResponse(turmaRepository.save(turma));
 	}
 
 	@Override
 	@Transactional(readOnly = true)
-	public List<TurmaResponse> listar(UUID cursoId, StatusTurma status) {
+	public List<TurmaResponse> listar(UUID cursoId, StatusTurma status, UUID liderPessoaIdRestrito) {
 		List<Turma> turmas;
 		if (cursoId != null && status != null) {
 			turmas = turmaRepository.findByCursoIdAndStatus(cursoId, status);
@@ -95,13 +105,27 @@ public class TurmaServiceImpl implements TurmaService {
 		} else {
 			turmas = turmaRepository.findAll();
 		}
-		return turmas.stream().map(this::toResponse).toList();
+		return turmas.stream()
+				.filter(turma -> dentroDoEscopo(turma, liderPessoaIdRestrito))
+				.map(this::toResponse)
+				.toList();
 	}
 
 	@Override
 	@Transactional(readOnly = true)
-	public TurmaResponse buscarPorId(UUID id) {
-		return toResponse(buscarEntidadePorId(id));
+	public TurmaResponse buscarPorId(UUID id, UUID liderPessoaIdRestrito) {
+		Turma turma = buscarEntidadePorId(id);
+		if (!dentroDoEscopo(turma, liderPessoaIdRestrito)) {
+			throw new TurmaForaDoEscopoException();
+		}
+		return toResponse(turma);
+	}
+
+	private boolean dentroDoEscopo(Turma turma, UUID liderPessoaIdRestrito) {
+		if (liderPessoaIdRestrito == null) {
+			return true;
+		}
+		return turma.getLider() != null && liderPessoaIdRestrito.equals(turma.getLider().getPessoaId());
 	}
 
 	@Override
@@ -203,6 +227,10 @@ public class TurmaServiceImpl implements TurmaService {
 			throw new CursoInativoException(cursoId);
 		}
 		return curso;
+	}
+
+	private UsuarioAdmin buscarLider(UUID liderId) {
+		return usuarioAdminRepository.findById(liderId).orElseThrow(() -> new LiderNaoEncontradoException(liderId));
 	}
 
 	private Turma buscarEntidadePorId(UUID id) {

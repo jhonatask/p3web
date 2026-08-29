@@ -4,6 +4,7 @@ public enum Papel {
 
 	PROFESSOR,
 	ADMIN,
-	VISUALIZADOR
+	VISUALIZADOR,
+	LIDER
 
 }

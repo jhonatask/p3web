@@ -13,9 +13,9 @@ public interface TurmaService {
 
 	TurmaResponse criar(TurmaRequest request);
 
-	List<TurmaResponse> listar(UUID cursoId, StatusTurma status);
+	List<TurmaResponse> listar(UUID cursoId, StatusTurma status, UUID liderPessoaIdRestrito);
 
-	TurmaResponse buscarPorId(UUID id);
+	TurmaResponse buscarPorId(UUID id, UUID liderPessoaIdRestrito);
 
 	TurmaResponse encerrar(UUID id);
 

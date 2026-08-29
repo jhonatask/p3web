@@ -1,5 +1,6 @@
 package br.com.familychurch.p3.turma.controller;
 
+import br.com.familychurch.p3.auth.PessoaPrincipal;
 import br.com.familychurch.p3.turma.StatusTurma;
 import br.com.familychurch.p3.turma.dto.TurmaAbertaResponse;
 import br.com.familychurch.p3.turma.dto.TurmaDashboardResponse;
@@ -13,6 +14,7 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -44,13 +46,16 @@ public class TurmaController {
 	@GetMapping("/api/turmas")
 	public List<TurmaResponse> listar(
 			@RequestParam(required = false) UUID cursoId,
-			@RequestParam(required = false) StatusTurma status) {
-		return turmaService.listar(cursoId, status);
+			@RequestParam(required = false) StatusTurma status,
+			@AuthenticationPrincipal PessoaPrincipal principal) {
+		UUID liderPessoaIdRestrito = principal.liderRestrito() ? principal.pessoaId() : null;
+		return turmaService.listar(cursoId, status, liderPessoaIdRestrito);
 	}
 
 	@GetMapping("/api/turmas/{id}")
-	public TurmaResponse buscarPorId(@PathVariable UUID id) {
-		return turmaService.buscarPorId(id);
+	public TurmaResponse buscarPorId(@PathVariable UUID id, @AuthenticationPrincipal PessoaPrincipal principal) {
+		UUID liderPessoaIdRestrito = principal.liderRestrito() ? principal.pessoaId() : null;
+		return turmaService.buscarPorId(id, liderPessoaIdRestrito);
 	}
 
 	@PatchMapping("/api/turmas/{id}/encerrar")
