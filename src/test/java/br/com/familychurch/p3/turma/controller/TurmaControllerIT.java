@@ -16,9 +16,6 @@ import br.com.familychurch.p3.curso.Curso;
 import br.com.familychurch.p3.curso.repository.CursoRepository;
 import br.com.familychurch.p3.presenca.repository.PresencaRepository;
 import br.com.familychurch.p3.turma.repository.TurmaRepository;
-import br.com.familychurch.p3.usuarioadmin.Papel;
-import br.com.familychurch.p3.usuarioadmin.UsuarioAdmin;
-import br.com.familychurch.p3.usuarioadmin.repository.UsuarioAdminRepository;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,9 +45,6 @@ class TurmaControllerIT extends IntegrationTestSupport {
 
 	@Autowired
 	private AvaliacaoRepository avaliacaoRepository;
-
-	@Autowired
-	private UsuarioAdminRepository usuarioAdminRepository;
 
 	@BeforeEach
 	void configurarCenario() {
@@ -156,97 +150,41 @@ class TurmaControllerIT extends IntegrationTestSupport {
 	}
 
 	@Test
-	void deveCriarTurmaComLiderVinculado() throws Exception {
-		UUID cursoId = obterCursoEscolaHombridade();
-		UUID liderId = criarLider("Paulo", UUID.randomUUID());
-
-		mockMvc.perform(post("/api/turmas")
-				.with(autenticado())
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{"cursoId": "%s", "nome": "Turma do Paulo", "liderId": "%s"}
-						""".formatted(cursoId, liderId)))
-				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.liderId").value(liderId.toString()))
-				.andExpect(jsonPath("$.liderNome").value("Paulo"));
-	}
-
-	@Test
-	void deveRetornar404QuandoLiderInexistenteAoCriarTurma() throws Exception {
-		UUID cursoId = obterCursoEscolaHombridade();
-		UUID liderInexistente = UUID.randomUUID();
-
-		mockMvc.perform(post("/api/turmas")
-				.with(autenticado())
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{"cursoId": "%s", "nome": "Turma sem lider valido", "liderId": "%s"}
-						""".formatted(cursoId, liderInexistente)))
-				.andExpect(status().isNotFound());
-	}
-
-	@Test
-	void liderRestritoSoVeSuaPropriaTurmaNaListagem() throws Exception {
+	void liderRestritoSoVeSuaTurmaEscopadaNaListagem() throws Exception {
 		UUID cursoId = obterCursoEscolaHombridade();
 		UUID pessoaPaulo = UUID.randomUUID();
-		UUID pessoaMarcio = UUID.randomUUID();
-		UUID liderPaulo = criarLider("Paulo", pessoaPaulo);
-		UUID liderMarcio = criarLider("Marcio", pessoaMarcio);
-		criarTurmaComLider(cursoId, "Turma do Paulo", liderPaulo);
-		criarTurmaComLider(cursoId, "Turma do Marcio", liderMarcio);
+		String turmaDoPaulo = criarTurma(cursoId, "Turma do Paulo");
+		criarTurma(cursoId, "Turma do Marcio");
 
 		mockMvc.perform(get("/api/turmas")
-				.with(autenticadoComoLiderComEscopo(pessoaPaulo, "85")))
+				.with(autenticadoComoLiderComEscopo(pessoaPaulo, turmaDoPaulo)))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$", hasSize(1)))
 				.andExpect(jsonPath("$[0].nome").value("Turma do Paulo"));
 	}
 
 	@Test
-	void liderRestritoRecebe403AoBuscarTurmaDeOutroLider() throws Exception {
+	void liderRestritoRecebe403AoBuscarTurmaForaDoEscopo() throws Exception {
 		UUID cursoId = obterCursoEscolaHombridade();
 		UUID pessoaPaulo = UUID.randomUUID();
-		UUID pessoaMarcio = UUID.randomUUID();
-		UUID liderMarcio = criarLider("Marcio", pessoaMarcio);
-		String turmaDoMarcio = criarTurmaComLider(cursoId, "Turma do Marcio", liderMarcio);
+		String turmaDoMarcio = criarTurma(cursoId, "Turma do Marcio");
+		String turmaDoPaulo = criarTurma(cursoId, "Turma do Paulo");
 
 		mockMvc.perform(get("/api/turmas/{id}", turmaDoMarcio)
-				.with(autenticadoComoLiderComEscopo(pessoaPaulo, "85")))
+				.with(autenticadoComoLiderComEscopo(pessoaPaulo, turmaDoPaulo)))
 				.andExpect(status().isForbidden());
 	}
 
 	@Test
 	void liderSemEscopoVeTodasAsTurmas() throws Exception {
 		UUID cursoId = obterCursoEscolaHombridade();
-		UUID liderPaulo = criarLider("Paulo", UUID.randomUUID());
-		criarTurmaComLider(cursoId, "Turma do Paulo", liderPaulo);
-		criarTurma(cursoId, "Turma sem lider");
+		criarTurma(cursoId, "Turma do Paulo");
+		criarTurma(cursoId, "Turma do Marcio");
 
 		mockMvc.perform(get("/api/turmas")
 				.with(autenticadoComoLiderSemEscopo(UUID.randomUUID())))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$", hasSize(2)));
-	}
-
-	private UUID criarLider(String nome, UUID pessoaId) {
-		UsuarioAdmin lider = new UsuarioAdmin();
-		lider.setNome(nome);
-		lider.setEmail(nome.toLowerCase() + "-" + UUID.randomUUID() + "@hombridade.local");
-		lider.setSenha("senha-nao-usada");
-		lider.setPapel(Papel.LIDER);
-		lider.setPessoaId(pessoaId);
-		return usuarioAdminRepository.save(lider).getId();
-	}
-
-	private String criarTurmaComLider(UUID cursoId, String nome, UUID liderId) throws Exception {
-		var resultado = mockMvc.perform(post("/api/turmas")
-				.with(autenticado())
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{"cursoId": "%s", "nome": "%s", "liderId": "%s"}
-						""".formatted(cursoId, nome, liderId)))
-				.andReturn();
-		return objectMapper.readTree(resultado.getResponse().getContentAsString()).get("id").asText();
 	}
 
 	private UUID criarCursoAtivo(String nome) {

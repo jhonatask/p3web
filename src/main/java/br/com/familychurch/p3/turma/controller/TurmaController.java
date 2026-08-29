@@ -11,6 +11,7 @@ import br.com.familychurch.p3.turma.service.TurmaService;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -48,14 +49,14 @@ public class TurmaController {
 			@RequestParam(required = false) UUID cursoId,
 			@RequestParam(required = false) StatusTurma status,
 			@AuthenticationPrincipal PessoaPrincipal principal) {
-		UUID liderPessoaIdRestrito = principal.liderRestrito() ? principal.pessoaId() : null;
-		return turmaService.listar(cursoId, status, liderPessoaIdRestrito);
+		Set<UUID> turmasPermitidas = principal.liderRestrito() ? principal.turmasEscopoLiderP3() : null;
+		return turmaService.listar(cursoId, status, turmasPermitidas);
 	}
 
 	@GetMapping("/api/turmas/{id}")
 	public TurmaResponse buscarPorId(@PathVariable UUID id, @AuthenticationPrincipal PessoaPrincipal principal) {
-		UUID liderPessoaIdRestrito = principal.liderRestrito() ? principal.pessoaId() : null;
-		return turmaService.buscarPorId(id, liderPessoaIdRestrito);
+		Set<UUID> turmasPermitidas = principal.liderRestrito() ? principal.turmasEscopoLiderP3() : null;
+		return turmaService.buscarPorId(id, turmasPermitidas);
 	}
 
 	@PatchMapping("/api/turmas/{id}/encerrar")

@@ -7,15 +7,16 @@ import br.com.familychurch.p3.turma.dto.TurmaPublicaResponse;
 import br.com.familychurch.p3.turma.dto.TurmaRequest;
 import br.com.familychurch.p3.turma.dto.TurmaResponse;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public interface TurmaService {
 
 	TurmaResponse criar(TurmaRequest request);
 
-	List<TurmaResponse> listar(UUID cursoId, StatusTurma status, UUID liderPessoaIdRestrito);
+	List<TurmaResponse> listar(UUID cursoId, StatusTurma status, Set<UUID> turmasPermitidas);
 
-	TurmaResponse buscarPorId(UUID id, UUID liderPessoaIdRestrito);
+	TurmaResponse buscarPorId(UUID id, Set<UUID> turmasPermitidas);
 
 	TurmaResponse encerrar(UUID id);
 

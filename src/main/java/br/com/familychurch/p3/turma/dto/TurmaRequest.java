@@ -12,9 +12,7 @@ public record TurmaRequest(
 		@NotBlank
 		String nome,
 
-		String moduloAtual,
-
-		UUID liderId
+		String moduloAtual
 
 ) {
 }
