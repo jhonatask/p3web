@@ -1,20 +1,18 @@
 "use client";
 
 import { FormEvent, useId, useState } from "react";
-import { criarTurma, ErroApi, type Curso, type Lider, type TurmaAdmin } from "@/lib/api";
+import { criarTurma, ErroApi, type Curso, type TurmaAdmin } from "@/lib/api";
 import CampoTexto from "./CampoTexto";
 import CampoSelect from "./CampoSelect";
 
 type FormularioNovaTurmaProps = {
   cursos: Curso[];
-  lideres: Lider[];
   onCriada: (turma: TurmaAdmin) => void;
   onCancelar: () => void;
 };
 
-export default function FormularioNovaTurma({ cursos, lideres, onCriada, onCancelar }: FormularioNovaTurmaProps) {
+export default function FormularioNovaTurma({ cursos, onCriada, onCancelar }: FormularioNovaTurmaProps) {
   const [cursoId, setCursoId] = useState(cursos[0]?.id ?? "");
-  const [liderId, setLiderId] = useState("");
   const [nome, setNome] = useState("");
   const [moduloAtual, setModuloAtual] = useState("");
   const [erro, setErro] = useState<string | null>(null);
@@ -36,12 +34,7 @@ export default function FormularioNovaTurma({ cursos, lideres, onCriada, onCance
 
     setEnviando(true);
     try {
-      const turma = await criarTurma({
-        cursoId,
-        nome: nome.trim(),
-        moduloAtual: moduloAtual.trim() || null,
-        liderId: liderId || null,
-      });
+      const turma = await criarTurma({ cursoId, nome: nome.trim(), moduloAtual: moduloAtual.trim() || null });
       onCriada(turma);
     } catch (erroCapturado) {
       setErro(erroCapturado instanceof ErroApi ? erroCapturado.message : "Não foi possível criar a turma.");
@@ -65,15 +58,6 @@ export default function FormularioNovaTurma({ cursos, lideres, onCriada, onCance
         onChange={setCursoId}
         opcoes={cursos.map((curso) => ({ valor: curso.id, rotulo: curso.nome }))}
         placeholder={cursos.length === 0 ? "Nenhum curso ativo" : undefined}
-      />
-
-      <CampoSelect
-        id={`${idBase}-lider`}
-        label="Líder responsável"
-        valor={liderId}
-        onChange={setLiderId}
-        opcoes={lideres.map((lider) => ({ valor: lider.id, rotulo: lider.nome }))}
-        placeholder="Sem líder definido"
       />
 
       <CampoTexto
