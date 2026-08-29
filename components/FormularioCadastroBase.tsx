@@ -118,6 +118,8 @@ type FormularioCadastroBaseProps = {
   cpfInicial?: string;
   /** Pre-preenche o formulário inteiro — usado pela tela de atualizar cadastro. */
   dadosIniciais?: ParticipanteEdicao;
+  /** Token de atualização (vindo do link por e-mail) — exigido pelo backend quando o CPF já tem cadastro. */
+  tokenAtualizacao?: string;
 };
 
 function campoOuVazio(valor: string | null | undefined): string {
@@ -249,6 +251,7 @@ export default function FormularioCadastroBase({
   onCadastroConcluido,
   cpfInicial,
   dadosIniciais,
+  tokenAtualizacao,
 }: FormularioCadastroBaseProps) {
   const [campos, setCampos] = useState<CamposFormulario>(() => {
     if (dadosIniciais) {
@@ -335,6 +338,7 @@ export default function FormularioCadastroBase({
       participaGc: campos.participaGc === true,
       quaisGcs: campos.quaisGcs,
       aceiteLgpd: campos.aceiteLgpd,
+      token: tokenAtualizacao ?? null,
     };
 
     try {
