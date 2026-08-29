@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import AtualizarCadastroBaseCliente from "@/components/AtualizarCadastroBaseCliente";
 
 export const metadata: Metadata = {
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function PaginaAtualizarCadastroBase() {
-  return <AtualizarCadastroBaseCliente />;
+  return (
+    <Suspense>
+      <AtualizarCadastroBaseCliente />
+    </Suspense>
+  );
 }

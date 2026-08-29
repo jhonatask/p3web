@@ -23,7 +23,7 @@ type CadastroBaseClienteProps = {
 
 type Fase =
   | { tipo: "formulario" }
-  | { tipo: "escolher-turma"; nome: string; cpf: string; turmas: TurmaAberta[] }
+  | { tipo: "escolher-turma"; nome: string; cpf: string; tokenMatricula: string; turmas: TurmaAberta[] }
   | { tipo: "concluido"; nome: string; turmaMatriculada?: string };
 
 export default function CadastroBaseCliente({
@@ -45,7 +45,13 @@ export default function CadastroBaseCliente({
         setFase({ tipo: "concluido", nome: participante.nome });
         return;
       }
-      setFase({ tipo: "escolher-turma", nome: participante.nome, cpf: participante.cpf, turmas });
+      setFase({
+        tipo: "escolher-turma",
+        nome: participante.nome,
+        cpf: participante.cpf,
+        tokenMatricula: participante.tokenMatricula,
+        turmas,
+      });
     } catch {
       // Se a busca de turmas abertas falhar, o cadastro em si já foi salvo -
       // não vale travar o usuário aqui, só pula a oferta de matrícula.
@@ -60,6 +66,7 @@ export default function CadastroBaseCliente({
     conteudo = (
       <MatricularTurmaAberta
         cpf={fase.cpf}
+        tokenMatricula={fase.tokenMatricula}
         turmas={fase.turmas}
         onMatriculado={(turmaNome) => setFase({ tipo: "concluido", nome: fase.nome, turmaMatriculada: turmaNome })}
         onPular={() => setFase({ tipo: "concluido", nome: fase.nome })}

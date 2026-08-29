@@ -64,6 +64,15 @@ async function tratarResposta<T>(resposta: Response): Promise<T> {
   throw new ErroApi(corpo);
 }
 
+async function tratarRespostaSemCorpo(resposta: Response): Promise<void> {
+  if (resposta.ok) {
+    return;
+  }
+
+  const corpo = (await resposta.json()) as ApiErrorBody;
+  throw new ErroApi(corpo);
+}
+
 /**
  * Injeta o token da area logada e trata 401 (sessao expirada/invalida)
  * mandando de volta pro login. Usado por todas as chamadas autenticadas da
@@ -129,12 +138,14 @@ export type ParticipanteCadastroRequest = {
   participaGc: boolean;
   quaisGcs: string[];
   aceiteLgpd: boolean;
+  token: string | null;
 };
 
 export type ParticipanteCadastrado = {
   id: string;
   nome: string;
   cpf: string;
+  tokenMatricula: string;
 };
 
 export async function cadastrarParticipante(dados: ParticipanteCadastroRequest): Promise<ParticipanteCadastrado> {
@@ -177,11 +188,21 @@ export type ParticipanteEdicao = {
   quaisGcs: string[];
 };
 
-/** Usado pela tela de atualizar cadastro-base para pre-preencher o formulário a partir do CPF. */
-export async function buscarCadastroPorCpf(cpf: string): Promise<ParticipanteEdicao> {
-  const resposta = await fetch(`${obterUrlBase()}/api/publico/participantes/${cpf}/cadastro`, {
-    cache: "no-store",
+export async function solicitarAtualizacaoCadastro(cpf: string): Promise<void> {
+  const resposta = await fetch(`${obterUrlBase()}/api/publico/participantes/solicitar-atualizacao`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ cpf }),
   });
+  await tratarRespostaSemCorpo(resposta);
+}
+
+/** Usado pela tela de atualizar cadastro-base para pre-preencher o formulário a partir do link enviado por e-mail. */
+export async function buscarCadastroPorToken(token: string): Promise<ParticipanteEdicao> {
+  const resposta = await fetch(
+    `${obterUrlBase()}/api/publico/participantes/cadastro?token=${encodeURIComponent(token)}`,
+    { cache: "no-store" },
+  );
   return tratarResposta<ParticipanteEdicao>(resposta);
 }
 
@@ -205,18 +226,6 @@ export async function buscarAulaAtiva(token: string): Promise<AulaAtiva> {
   return tratarResposta<AulaAtiva>(resposta);
 }
 
-export type ParticipanteResumo = {
-  id: string;
-  nome: string;
-};
-
-export async function buscarParticipantePorCpf(cpf: string): Promise<ParticipanteResumo> {
-  const resposta = await fetch(`${obterUrlBase()}/api/publico/participantes/${cpf}/resumo`, {
-    cache: "no-store",
-  });
-  return tratarResposta<ParticipanteResumo>(resposta);
-}
-
 export type TurmaAberta = {
   id: string;
   cursoNome: string;
@@ -238,11 +247,11 @@ export type MatriculaResultado = {
   jaEstavaMatriculado: boolean;
 };
 
-export async function matricularEmTurma(turmaId: string, cpf: string): Promise<MatriculaResultado> {
+export async function matricularEmTurma(turmaId: string, cpf: string, token: string): Promise<MatriculaResultado> {
   const resposta = await fetch(`${obterUrlBase()}/api/publico/turmas/${turmaId}/matricula`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ cpf }),
+    body: JSON.stringify({ cpf, token }),
   });
   return tratarResposta<MatriculaResultado>(resposta);
 }

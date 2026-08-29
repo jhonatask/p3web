@@ -5,12 +5,19 @@ import { matricularEmTurma, ErroApi, type TurmaAberta } from "@/lib/api";
 
 type MatricularTurmaAbertaProps = {
   cpf: string;
+  tokenMatricula: string;
   turmas: TurmaAberta[];
   onMatriculado: (turmaNome: string) => void;
   onPular: () => void;
 };
 
-export default function MatricularTurmaAberta({ cpf, turmas, onMatriculado, onPular }: MatricularTurmaAbertaProps) {
+export default function MatricularTurmaAberta({
+  cpf,
+  tokenMatricula,
+  turmas,
+  onMatriculado,
+  onPular,
+}: MatricularTurmaAbertaProps) {
   const [matriculando, setMatriculando] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -18,7 +25,7 @@ export default function MatricularTurmaAberta({ cpf, turmas, onMatriculado, onPu
     setErro(null);
     setMatriculando(turma.id);
     try {
-      const resultado = await matricularEmTurma(turma.id, cpf);
+      const resultado = await matricularEmTurma(turma.id, cpf, tokenMatricula);
       onMatriculado(resultado.turmaNome);
     } catch (erroCapturado) {
       setErro(erroCapturado instanceof ErroApi ? erroCapturado.message : "Não foi possível concluir a matrícula.");
