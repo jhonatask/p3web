@@ -3,7 +3,16 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { obterPainel, gerarLinkWhatsapp, ErroApi, type PainelTurma, type PainelLinha, type ModuloAula } from "@/lib/api";
+import {
+  obterPainel,
+  obterDashboardTurma,
+  gerarLinkWhatsapp,
+  ErroApi,
+  type PainelTurma,
+  type PainelLinha,
+  type ModuloAula,
+  type TurmaDashboard,
+} from "@/lib/api";
 
 const ROTULOS_MODULO: Record<ModuloAula, string> = {
   INTRODUTORIO: "Introdutório",
@@ -37,6 +46,7 @@ export default function PaginaPainelTurma() {
   const turmaId = params.id;
 
   const [painel, setPainel] = useState<PainelTurma | null>(null);
+  const [dashboard, setDashboard] = useState<TurmaDashboard | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [linkGerando, setLinkGerando] = useState<string | null>(null);
 
@@ -46,6 +56,14 @@ export default function PaginaPainelTurma() {
       setPainel(painelCarregado);
     } catch {
       setErro("Não foi possível carregar o painel.");
+    }
+
+    try {
+      const dashboardCarregado = await obterDashboardTurma(turmaId);
+      setDashboard(dashboardCarregado);
+    } catch {
+      // O relatório de avaliação é um extra do painel - se falhar, não deve
+      // impedir a exibição da tabela de formatura/reposição.
     }
   }
 
@@ -86,12 +104,74 @@ export default function PaginaPainelTurma() {
         <Link href={`/turmas/${turmaId}`} className="text-sm text-neutral-500 hover:underline">
           ← {painel.turmaNome ?? "Turma"}
         </Link>
-        <h1 className="mt-2 text-xl font-semibold text-neutral-900">Formatura e reposição</h1>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+          <h1 className="text-xl font-semibold text-neutral-900">Formatura e reposição</h1>
+          <span className="rounded-full bg-neutral-100 px-3 py-1 text-sm font-medium text-neutral-700">
+            Inscritos: {painel.totalMatriculados}
+          </span>
+        </div>
       </div>
 
       {erro && (
         <div role="alert" className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
           {erro}
+        </div>
+      )}
+
+      <div className="rounded-xl border border-neutral-200 bg-white p-5">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Últimas faltas</h2>
+        {!painel.aulaReferenciaUltimasFaltas ? (
+          <p className="mt-2 text-sm text-neutral-500">Ainda não houve aula encerrada nesta turma.</p>
+        ) : (
+          <>
+            <p className="mt-1 text-sm text-neutral-600">
+              Referente à Aula {String(painel.aulaReferenciaUltimasFaltas.numero).padStart(2, "0")} —{" "}
+              {painel.aulaReferenciaUltimasFaltas.tema}
+            </p>
+            {painel.ultimasFaltas.length === 0 ? (
+              <p className="mt-2 text-sm text-emerald-700">Ninguém faltou.</p>
+            ) : (
+              <ul className="mt-2 list-inside list-disc text-sm text-neutral-700">
+                {painel.ultimasFaltas.map((falta) => (
+                  <li key={falta.participanteId}>{falta.nome}</li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+      </div>
+
+      {dashboard && dashboard.porAula.length > 0 && (
+        <div className="overflow-x-auto rounded-xl border border-neutral-200 bg-white">
+          <h2 className="px-5 pt-4 text-sm font-semibold uppercase tracking-wide text-neutral-500">
+            Relatório de avaliação das aulas
+          </h2>
+          <table className="mt-2 w-full text-left text-sm">
+            <thead className="border-b border-neutral-200 bg-neutral-50 text-xs uppercase tracking-wide text-neutral-500">
+              <tr>
+                <th className="px-4 py-3">Aula</th>
+                <th className="px-4 py-3">Presença</th>
+                <th className="px-4 py-3">Nota média</th>
+                <th className="px-4 py-3">NPS médio</th>
+              </tr>
+            </thead>
+            <tbody>
+              {dashboard.porAula.map((aula) => (
+                <tr key={aula.aulaId} className="border-b border-neutral-100 last:border-0">
+                  <td className="px-4 py-3 font-medium text-neutral-900">
+                    {aula.numero === 0 ? "Introdutória" : `Aula ${String(aula.numero).padStart(2, "0")}`}
+                  </td>
+                  <td className="px-4 py-3 text-neutral-600">
+                    {aula.totalPresencas} · {aula.percentualPresenca.toFixed(0)}%
+                  </td>
+                  <td className="px-4 py-3 text-neutral-600">
+                    {aula.notaMedia !== null ? aula.notaMedia.toFixed(1) : "—"}
+                  </td>
+                  <td className="px-4 py-3 text-neutral-600">{aula.npsMedia !== null ? aula.npsMedia.toFixed(1) : "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
