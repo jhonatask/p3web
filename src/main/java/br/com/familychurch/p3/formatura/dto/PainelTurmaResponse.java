@@ -7,6 +7,9 @@ public record PainelTurmaResponse(
 
 		UUID turmaId,
 		String turmaNome,
+		int totalMatriculados,
+		AulaFalta aulaReferenciaUltimasFaltas,
+		List<UltimaFaltaResponse> ultimasFaltas,
 		List<PainelLinhaResponse> linhas
 
 ) {

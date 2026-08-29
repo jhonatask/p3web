@@ -2,8 +2,11 @@ package br.com.familychurch.p3.formatura.service;
 
 import br.com.familychurch.p3.aluno.Aluno;
 import br.com.familychurch.p3.aluno.repository.AlunoRepository;
+import br.com.familychurch.p3.aula.Aula;
 import br.com.familychurch.p3.aula.ModuloAula;
+import br.com.familychurch.p3.aula.StatusAula;
 import br.com.familychurch.p3.aula.TipoAula;
+import br.com.familychurch.p3.aula.repository.AulaRepository;
 import br.com.familychurch.p3.aula.repository.TipoAulaRepository;
 import br.com.familychurch.p3.formatura.dto.AulaFalta;
 import br.com.familychurch.p3.formatura.dto.LinkWhatsappResponse;
@@ -12,6 +15,7 @@ import br.com.familychurch.p3.formatura.dto.PainelTurmaResponse;
 import br.com.familychurch.p3.formatura.dto.StatusFormatura;
 import br.com.familychurch.p3.formatura.dto.StatusGeralFormatura;
 import br.com.familychurch.p3.formatura.dto.StatusModulo;
+import br.com.familychurch.p3.formatura.dto.UltimaFaltaResponse;
 import br.com.familychurch.p3.formatura.exception.CelularNaoCadastradoException;
 import br.com.familychurch.p3.formatura.exception.MatriculaNaoEncontradaException;
 import br.com.familychurch.p3.formatura.exception.NenhumaReposicaoPendenteException;
@@ -44,15 +48,17 @@ public class FormaturaServiceImpl implements FormaturaService {
 	private static final String PREFIXO_PAIS_WHATSAPP = "55";
 
 	private final AlunoRepository alunoRepository;
+	private final AulaRepository aulaRepository;
 	private final TipoAulaRepository tipoAulaRepository;
 	private final PresencaRepository presencaRepository;
 	private final HistoricoItemRepository historicoItemRepository;
 	private final ParticipanteRepository participanteRepository;
 
-	public FormaturaServiceImpl(AlunoRepository alunoRepository, TipoAulaRepository tipoAulaRepository,
-			PresencaRepository presencaRepository, HistoricoItemRepository historicoItemRepository,
-			ParticipanteRepository participanteRepository) {
+	public FormaturaServiceImpl(AlunoRepository alunoRepository, AulaRepository aulaRepository,
+			TipoAulaRepository tipoAulaRepository, PresencaRepository presencaRepository,
+			HistoricoItemRepository historicoItemRepository, ParticipanteRepository participanteRepository) {
 		this.alunoRepository = alunoRepository;
+		this.aulaRepository = aulaRepository;
 		this.tipoAulaRepository = tipoAulaRepository;
 		this.presencaRepository = presencaRepository;
 		this.historicoItemRepository = historicoItemRepository;
@@ -139,7 +145,31 @@ public class FormaturaServiceImpl implements FormaturaService {
 				.toList();
 
 		String turmaNome = matriculados.isEmpty() ? null : matriculados.get(0).getTurma().getNome();
-		return new PainelTurmaResponse(turmaId, turmaNome, linhas);
+		Aula ultimaAulaEncerrada = buscarUltimaAulaEncerrada(turmaId);
+		AulaFalta aulaReferencia = ultimaAulaEncerrada == null ? null
+				: new AulaFalta(ultimaAulaEncerrada.getTipoAula().getId(), ultimaAulaEncerrada.getTipoAula().getNumero(),
+						ultimaAulaEncerrada.getTipoAula().getTema());
+		List<UltimaFaltaResponse> ultimasFaltas = ultimaAulaEncerrada == null ? List.of()
+				: matriculados.stream()
+						.filter(aluno -> !presencaRepository.existsByParticipanteIdAndAula_TipoAulaId(
+								aluno.getParticipante().getId(), ultimaAulaEncerrada.getTipoAula().getId()))
+						.map(aluno -> new UltimaFaltaResponse(aluno.getParticipante().getId(), aluno.getParticipante().getNome()))
+						.toList();
+
+		return new PainelTurmaResponse(turmaId, turmaNome, matriculados.size(), aulaReferencia, ultimasFaltas, linhas);
+	}
+
+	/**
+	 * "Ultimas faltas" olha so para a aula mais recente ja encerrada (maior
+	 * TipoAula.ordem) - falta aqui usa o mesmo criterio de presenca da
+	 * formatura (por TipoAula, nao por sessao), entao uma reposicao feita em
+	 * outra turma tambem conta como presenca.
+	 */
+	private Aula buscarUltimaAulaEncerrada(UUID turmaId) {
+		return aulaRepository.findByTurmaIdOrderByTipoAulaOrdemAsc(turmaId).stream()
+				.filter(aula -> aula.getStatus() == StatusAula.ENCERRADA)
+				.reduce((primeira, ultima) -> ultima)
+				.orElse(null);
 	}
 
 	@Override

@@ -11,6 +11,7 @@ import br.com.familychurch.p3.presenca.repository.PresencaRepository;
 import br.com.familychurch.p3.turma.StatusTurma;
 import br.com.familychurch.p3.turma.Turma;
 import br.com.familychurch.p3.turma.dto.AulaDashboardItem;
+import br.com.familychurch.p3.turma.dto.TurmaAbertaResponse;
 import br.com.familychurch.p3.turma.dto.TurmaDashboardResponse;
 import br.com.familychurch.p3.turma.dto.TurmaPublicaResponse;
 import br.com.familychurch.p3.turma.dto.TurmaRequest;
@@ -27,6 +28,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.security.SecureRandom;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -152,6 +154,29 @@ public class TurmaServiceImpl implements TurmaService {
 	public byte[] gerarImagemQrCode(UUID turmaId) {
 		Turma turma = buscarEntidadePorId(turmaId);
 		return gerarPng(TurmaResponse.from(turma, baseUrlChamada).linkCadastro());
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<TurmaAbertaResponse> listarAbertasParaMatricula() {
+		return turmaRepository.findByStatus(StatusTurma.ATIVA).stream()
+				.filter(this::aindaNaoComecou)
+				.map(TurmaAbertaResponse::from)
+				.toList();
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public boolean aceitaMatriculaDireta(UUID turmaId) {
+		Turma turma = buscarEntidadePorId(turmaId);
+		return turma.getStatus() == StatusTurma.ATIVA && aindaNaoComecou(turma);
+	}
+
+	private boolean aindaNaoComecou(Turma turma) {
+		return aulaRepository.findFirstByTurmaIdOrderByTipoAulaOrdemAsc(turma.getId())
+				.map(Aula::getData)
+				.map(data -> data.isAfter(LocalDate.now()))
+				.orElse(true);
 	}
 
 	private AulaDashboardItem montarItemDashboard(Aula aula, long totalAlunos) {

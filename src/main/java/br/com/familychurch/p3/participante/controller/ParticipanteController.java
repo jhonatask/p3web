@@ -2,6 +2,7 @@ package br.com.familychurch.p3.participante.controller;
 
 import br.com.familychurch.p3.participante.dto.ParticipanteCadastroRequest;
 import br.com.familychurch.p3.participante.dto.ParticipanteCadastroResponse;
+import br.com.familychurch.p3.participante.dto.ParticipanteEdicaoResponse;
 import br.com.familychurch.p3.participante.dto.ParticipanteResponse;
 import br.com.familychurch.p3.participante.dto.ParticipanteResumoResponse;
 import br.com.familychurch.p3.participante.service.ParticipanteService;
@@ -36,6 +37,11 @@ public class ParticipanteController {
 	@GetMapping("/api/publico/participantes/{cpf}/resumo")
 	public ParticipanteResumoResponse buscarResumoPorCpf(@PathVariable String cpf) {
 		return participanteService.buscarResumoPorCpf(cpf);
+	}
+
+	@GetMapping("/api/publico/participantes/{cpf}/cadastro")
+	public ParticipanteEdicaoResponse buscarParaEdicaoPorCpf(@PathVariable String cpf) {
+		return participanteService.buscarParaEdicaoPorCpf(cpf);
 	}
 
 }

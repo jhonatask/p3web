@@ -10,6 +10,7 @@ import br.com.familychurch.p3.participante.Endereco;
 import br.com.familychurch.p3.participante.Participante;
 import br.com.familychurch.p3.participante.dto.ParticipanteCadastroRequest;
 import br.com.familychurch.p3.participante.dto.ParticipanteCadastroResponse;
+import br.com.familychurch.p3.participante.dto.ParticipanteEdicaoResponse;
 import br.com.familychurch.p3.participante.dto.ParticipanteResponse;
 import br.com.familychurch.p3.participante.dto.ParticipanteResumoResponse;
 import br.com.familychurch.p3.participante.exception.ConsentimentoLgpdObrigatorioException;
@@ -21,6 +22,7 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -79,10 +81,30 @@ public class ParticipanteServiceImpl implements ParticipanteService {
 		return ParticipanteResumoResponse.from(participante);
 	}
 
+	@Override
+	@Transactional(readOnly = true)
+	public ParticipanteEdicaoResponse buscarParaEdicaoPorCpf(String cpf) {
+		String cpfLimpo = cpf.replaceAll("\\D", "");
+		Participante participante = participanteRepository.findByCpf(cpfLimpo)
+				.orElseThrow(() -> new ParticipanteNaoEncontradoException(cpfLimpo));
+		List<HistoricoItem> historico = historicoItemRepository.findByParticipanteId(participante.getId());
+		Set<String> cursosRealizados = itensDoHistorico(historico, TipoHistorico.CURSO);
+		Set<String> eventosParticipou = itensDoHistorico(historico, TipoHistorico.EVENTO);
+		return ParticipanteEdicaoResponse.from(participante, cursosRealizados, eventosParticipou);
+	}
+
+	private Set<String> itensDoHistorico(List<HistoricoItem> historico, TipoHistorico tipo) {
+		return historico.stream()
+				.filter(item -> item.getTipo() == tipo && item.getOrigem() == OrigemHistorico.CADASTRO)
+				.map(HistoricoItem::getItem)
+				.collect(Collectors.toCollection(HashSet::new));
+	}
+
 	private void preencherDadosDoFormulario(Participante participante, ParticipanteCadastroRequest request, String cpf) {
 		participante.setNome(request.nome());
 		participante.setCpf(cpf);
 		participante.setCelular(request.celular().replaceAll("\\D", ""));
+		participante.setEmail(request.email().trim());
 		participante.setDataNascimento(request.dataNascimento());
 		participante.setEstadoCivil(request.estadoCivil());
 		participante.setTemFilhos(request.temFilhos());

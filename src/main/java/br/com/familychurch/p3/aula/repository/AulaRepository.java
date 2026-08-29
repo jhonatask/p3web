@@ -24,4 +24,6 @@ public interface AulaRepository extends JpaRepository<Aula, UUID> {
 
 	Optional<Aula> findByTurmaIdAndTipoAulaId(UUID turmaId, UUID tipoAulaId);
 
+	Optional<Aula> findFirstByTurmaIdOrderByTipoAulaOrdemAsc(UUID turmaId);
+
 }

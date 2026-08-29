@@ -2,9 +2,14 @@ package br.com.familychurch.p3.aluno.service;
 
 import br.com.familychurch.p3.aluno.Aluno;
 import br.com.familychurch.p3.aluno.dto.AlunoResponse;
+import br.com.familychurch.p3.aluno.dto.MatriculaResponse;
+import br.com.familychurch.p3.aluno.exception.TurmaNaoAceitaMatriculaException;
 import br.com.familychurch.p3.aluno.repository.AlunoRepository;
+import br.com.familychurch.p3.participante.Participante;
+import br.com.familychurch.p3.participante.exception.ParticipanteNaoEncontradoException;
 import br.com.familychurch.p3.participante.repository.ParticipanteRepository;
 import br.com.familychurch.p3.turma.repository.TurmaRepository;
+import br.com.familychurch.p3.turma.service.TurmaService;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -18,12 +23,14 @@ public class AlunoServiceImpl implements AlunoService {
 	private final AlunoRepository alunoRepository;
 	private final ParticipanteRepository participanteRepository;
 	private final TurmaRepository turmaRepository;
+	private final TurmaService turmaService;
 
 	public AlunoServiceImpl(AlunoRepository alunoRepository, ParticipanteRepository participanteRepository,
-			TurmaRepository turmaRepository) {
+			TurmaRepository turmaRepository, TurmaService turmaService) {
 		this.alunoRepository = alunoRepository;
 		this.participanteRepository = participanteRepository;
 		this.turmaRepository = turmaRepository;
+		this.turmaService = turmaService;
 	}
 
 	@Override
@@ -41,6 +48,20 @@ public class AlunoServiceImpl implements AlunoService {
 	@Transactional(readOnly = true)
 	public List<AlunoResponse> listarPorTurma(UUID turmaId) {
 		return alunoRepository.findByTurmaId(turmaId).stream().map(AlunoResponse::from).toList();
+	}
+
+	@Override
+	public MatriculaResponse matricularDireto(String cpf, UUID turmaId) {
+		String cpfLimpo = cpf.replaceAll("\\D", "");
+		Participante participante = participanteRepository.findByCpf(cpfLimpo)
+				.orElseThrow(() -> new ParticipanteNaoEncontradoException(cpfLimpo));
+		if (!turmaService.aceitaMatriculaDireta(turmaId)) {
+			throw new TurmaNaoAceitaMatriculaException(turmaId);
+		}
+
+		boolean jaEstavaMatriculado = alunoRepository.findByParticipanteId(participante.getId()).isPresent();
+		Aluno matricula = matricularSeNecessario(participante.getId(), turmaId);
+		return new MatriculaResponse(matricula.getTurma().getId(), matricula.getTurma().getNome(), jaEstavaMatriculado);
 	}
 
 }

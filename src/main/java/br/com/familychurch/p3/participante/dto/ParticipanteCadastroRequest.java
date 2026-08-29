@@ -3,6 +3,7 @@ package br.com.familychurch.p3.participante.dto;
 import br.com.familychurch.p3.common.validation.Cpf;
 import br.com.familychurch.p3.participante.EstadoCivil;
 import br.com.familychurch.p3.participante.TempoNaFamily;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Past;
@@ -20,6 +21,10 @@ public record ParticipanteCadastroRequest(
 
 		@NotBlank
 		String celular,
+
+		@NotBlank
+		@Email
+		String email,
 
 		@NotNull
 		@Past

@@ -44,6 +44,9 @@ public class Participante {
 	@Column(name = "celular")
 	private String celular;
 
+	@Column(name = "email")
+	private String email;
+
 	@Column(name = "campus")
 	private String campus;
 
