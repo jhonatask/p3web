@@ -7,6 +7,7 @@ import {
   type EstadoCivil,
   type ParticipanteCadastrado,
   type ParticipanteCadastroRequest,
+  type ParticipanteEdicao,
   type TempoNaFamily,
 } from "@/lib/api";
 import { mascararCelular, mascararCep, mascararCpf } from "@/lib/masks";
@@ -50,6 +51,7 @@ type CamposFormulario = {
   nome: string;
   cpf: string;
   celular: string;
+  email: string;
   dataNascimento: string;
   estadoCivil: EstadoCivil | null;
   temFilhos: boolean | null;
@@ -83,6 +85,7 @@ const CAMPOS_INICIAIS: CamposFormulario = {
   nome: "",
   cpf: "",
   celular: "",
+  email: "",
   dataNascimento: "",
   estadoCivil: null,
   temFilhos: null,
@@ -113,7 +116,56 @@ const CAMPOS_INICIAIS: CamposFormulario = {
 type FormularioCadastroBaseProps = {
   onCadastroConcluido: (participante: ParticipanteCadastrado) => void;
   cpfInicial?: string;
+  /** Pre-preenche o formulário inteiro — usado pela tela de atualizar cadastro. */
+  dadosIniciais?: ParticipanteEdicao;
 };
+
+function campoOuVazio(valor: string | null | undefined): string {
+  return valor ?? "";
+}
+
+function separarCatalogoEOutros(itens: string[], catalogo: string[]): { doCatalogo: string[]; outros: string } {
+  const doCatalogo = itens.filter((item) => catalogo.includes(item));
+  const outros = itens.filter((item) => !catalogo.includes(item));
+  return { doCatalogo, outros: outros.join(", ") };
+}
+
+function camposAPartirDaEdicao(dados: ParticipanteEdicao): CamposFormulario {
+  const cursos = separarCatalogoEOutros(dados.cursosRealizados, CURSOS_DISPONIVEIS);
+  const eventos = separarCatalogoEOutros(dados.eventosParticipou, EVENTOS_DISPONIVEIS);
+
+  return {
+    nome: dados.nome,
+    cpf: mascararCpf(dados.cpf),
+    celular: mascararCelular(dados.celular),
+    email: campoOuVazio(dados.email),
+    dataNascimento: dados.dataNascimento,
+    estadoCivil: dados.estadoCivil,
+    temFilhos: dados.temFilhos,
+    quantidadeFilhos: dados.quantidadeFilhos !== null ? String(dados.quantidadeFilhos) : "",
+    cep: mascararCep(campoOuVazio(dados.endereco?.cep)),
+    rua: campoOuVazio(dados.endereco?.rua),
+    numero: campoOuVazio(dados.endereco?.numero),
+    complemento: campoOuVazio(dados.endereco?.complemento),
+    bairro: campoOuVazio(dados.endereco?.bairro),
+    cidade: campoOuVazio(dados.endereco?.cidade),
+    uf: campoOuVazio(dados.endereco?.uf),
+    pontoReferencia: campoOuVazio(dados.endereco?.pontoReferencia),
+    tempoNaFamily: dados.tempoNaFamily,
+    batizado: dados.batizado,
+    serveMinisterio: dados.serveMinisterio,
+    qualMinisterioServe: campoOuVazio(dados.qualMinisterioServe),
+    instagram: campoOuVazio(dados.instagram),
+    facebook: campoOuVazio(dados.facebook),
+    cursosRealizados: cursos.doCatalogo,
+    cursosOutros: cursos.outros,
+    eventosParticipou: eventos.doCatalogo,
+    eventosOutros: eventos.outros,
+    participaGc: dados.participaGc,
+    quaisGcs: dados.quaisGcs,
+    aceiteLgpd: false,
+  };
+}
 
 function validarCampos(campos: CamposFormulario): ErrosFormulario {
   const erros: ErrosFormulario = {};
@@ -128,6 +180,10 @@ function validarCampos(campos: CamposFormulario): ErrosFormulario {
 
   if (somenteDigitos(campos.celular).length < 10) {
     erros.celular = "Informe um celular válido, com DDD.";
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(campos.email.trim())) {
+    erros.email = "Informe um e-mail válido.";
   }
 
   if (!campos.dataNascimento) {
@@ -189,10 +245,17 @@ function validarCampos(campos: CamposFormulario): ErrosFormulario {
   return erros;
 }
 
-export default function FormularioCadastroBase({ onCadastroConcluido, cpfInicial }: FormularioCadastroBaseProps) {
-  const [campos, setCampos] = useState<CamposFormulario>(() =>
-    cpfInicial ? { ...CAMPOS_INICIAIS, cpf: mascararCpf(cpfInicial) } : CAMPOS_INICIAIS,
-  );
+export default function FormularioCadastroBase({
+  onCadastroConcluido,
+  cpfInicial,
+  dadosIniciais,
+}: FormularioCadastroBaseProps) {
+  const [campos, setCampos] = useState<CamposFormulario>(() => {
+    if (dadosIniciais) {
+      return camposAPartirDaEdicao(dadosIniciais);
+    }
+    return cpfInicial ? { ...CAMPOS_INICIAIS, cpf: mascararCpf(cpfInicial) } : CAMPOS_INICIAIS;
+  });
   const [erros, setErros] = useState<ErrosFormulario>({});
   const [alertaGeral, setAlertaGeral] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -246,6 +309,7 @@ export default function FormularioCadastroBase({ onCadastroConcluido, cpfInicial
       nome: campos.nome.trim(),
       cpf: somenteDigitos(campos.cpf),
       celular: somenteDigitos(campos.celular),
+      email: campos.email.trim(),
       dataNascimento: campos.dataNascimento,
       estadoCivil: campos.estadoCivil as EstadoCivil,
       temFilhos: campos.temFilhos === true,
@@ -334,6 +398,17 @@ export default function FormularioCadastroBase({ onCadastroConcluido, cpfInicial
           inputMode="numeric"
           autoComplete="tel"
           placeholder="(00) 00000-0000"
+        />
+
+        <CampoTexto
+          id={`${idBase}-email`}
+          label="E-mail"
+          tipo="email"
+          valor={campos.email}
+          onChange={(valor) => atualizarCampo("email", valor)}
+          erro={erros.email}
+          autoComplete="email"
+          placeholder="seuemail@exemplo.com"
         />
 
         <CampoTexto
@@ -597,7 +672,7 @@ export default function FormularioCadastroBase({ onCadastroConcluido, cpfInicial
         disabled={!campos.aceiteLgpd || enviando}
         className="w-full rounded-lg bg-neutral-900 px-4 py-3 text-base font-medium text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-800 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-neutral-300"
       >
-        {enviando ? "Enviando..." : "Salvar cadastro"}
+        {enviando ? "Enviando..." : dadosIniciais ? "Salvar alterações" : "Salvar cadastro"}
       </button>
     </form>
   );

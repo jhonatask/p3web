@@ -103,6 +103,7 @@ export type ParticipanteCadastroRequest = {
   nome: string;
   cpf: string;
   celular: string;
+  email: string;
   dataNascimento: string;
   estadoCivil: EstadoCivil;
   temFilhos: boolean;
@@ -145,6 +146,45 @@ export async function cadastrarParticipante(dados: ParticipanteCadastroRequest):
   return tratarResposta<ParticipanteCadastrado>(resposta);
 }
 
+export type ParticipanteEdicao = {
+  nome: string;
+  cpf: string;
+  celular: string;
+  email: string | null;
+  dataNascimento: string;
+  estadoCivil: EstadoCivil;
+  temFilhos: boolean;
+  quantidadeFilhos: number | null;
+  endereco: {
+    cep: string | null;
+    rua: string | null;
+    numero: string | null;
+    complemento: string | null;
+    bairro: string | null;
+    cidade: string | null;
+    uf: string | null;
+    pontoReferencia: string | null;
+  } | null;
+  tempoNaFamily: TempoNaFamily;
+  batizado: boolean;
+  serveMinisterio: boolean;
+  qualMinisterioServe: string | null;
+  instagram: string | null;
+  facebook: string | null;
+  cursosRealizados: string[];
+  eventosParticipou: string[];
+  participaGc: boolean;
+  quaisGcs: string[];
+};
+
+/** Usado pela tela de atualizar cadastro-base para pre-preencher o formulário a partir do CPF. */
+export async function buscarCadastroPorCpf(cpf: string): Promise<ParticipanteEdicao> {
+  const resposta = await fetch(`${obterUrlBase()}/api/publico/participantes/${cpf}/cadastro`, {
+    cache: "no-store",
+  });
+  return tratarResposta<ParticipanteEdicao>(resposta);
+}
+
 export type ModuloAula = "INTRODUTORIO" | "PLATAFORMA" | "PROTECAO" | "PROVISAO";
 
 export type AulaAtiva = {
@@ -175,6 +215,36 @@ export async function buscarParticipantePorCpf(cpf: string): Promise<Participant
     cache: "no-store",
   });
   return tratarResposta<ParticipanteResumo>(resposta);
+}
+
+export type TurmaAberta = {
+  id: string;
+  cursoNome: string;
+  nome: string;
+  moduloAtual: string | null;
+};
+
+/** Turmas ativas que ainda não começaram — aparecem na oferta de matrícula direta após o cadastro-base. */
+export async function listarTurmasAbertas(): Promise<TurmaAberta[]> {
+  const resposta = await fetch(`${obterUrlBase()}/api/publico/turmas/abertas`, {
+    cache: "no-store",
+  });
+  return tratarResposta<TurmaAberta[]>(resposta);
+}
+
+export type MatriculaResultado = {
+  turmaId: string;
+  turmaNome: string;
+  jaEstavaMatriculado: boolean;
+};
+
+export async function matricularEmTurma(turmaId: string, cpf: string): Promise<MatriculaResultado> {
+  const resposta = await fetch(`${obterUrlBase()}/api/publico/turmas/${turmaId}/matricula`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ cpf }),
+  });
+  return tratarResposta<MatriculaResultado>(resposta);
 }
 
 export type OrigemPresenca = "CHAMADA" | "REPOSICAO";
@@ -441,9 +511,17 @@ export type PainelLinha = {
   formatura: StatusFormatura;
 };
 
+export type UltimaFalta = {
+  participanteId: string;
+  nome: string;
+};
+
 export type PainelTurma = {
   turmaId: string;
   turmaNome: string | null;
+  totalMatriculados: number;
+  aulaReferenciaUltimasFaltas: AulaFalta | null;
+  ultimasFaltas: UltimaFalta[];
   linhas: PainelLinha[];
 };
 
@@ -471,4 +549,30 @@ export type AlunoAdmin = {
 export async function listarAlunosDaTurma(turmaId: string): Promise<AlunoAdmin[]> {
   const resposta = await fetchAutenticado(`/api/turmas/${turmaId}/alunos`);
   return tratarResposta<AlunoAdmin[]>(resposta);
+}
+
+export type AulaDashboardItem = {
+  aulaId: string;
+  numero: number;
+  data: string;
+  totalPresencas: number;
+  percentualPresenca: number;
+  notaMedia: number | null;
+  npsMedia: number | null;
+};
+
+export type TurmaDashboard = {
+  turmaId: string;
+  turmaNome: string;
+  totalAulas: number;
+  totalAlunos: number;
+  frequenciaMedia: number;
+  notaMedia: number | null;
+  npsMedia: number | null;
+  porAula: AulaDashboardItem[];
+};
+
+export async function obterDashboardTurma(turmaId: string): Promise<TurmaDashboard> {
+  const resposta = await fetchAutenticado(`/api/turmas/${turmaId}/dashboard`);
+  return tratarResposta<TurmaDashboard>(resposta);
 }
