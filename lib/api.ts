@@ -302,6 +302,16 @@ export async function listarTiposAulaDoCurso(cursoId: string): Promise<TipoAulaR
 
 export type StatusTurma = "ATIVA" | "ENCERRADA";
 
+export type Lider = {
+  id: string;
+  nome: string;
+};
+
+export async function listarLideres(): Promise<Lider[]> {
+  const resposta = await fetchAutenticado("/api/usuarios-admin?papel=LIDER");
+  return tratarResposta<Lider[]>(resposta);
+}
+
 export type TurmaAdmin = {
   id: string;
   cursoId: string;
@@ -311,12 +321,15 @@ export type TurmaAdmin = {
   tokenCadastro: string;
   linkCadastro: string;
   status: StatusTurma;
+  liderId: string | null;
+  liderNome: string | null;
 };
 
 export type NovaTurma = {
   cursoId: string;
   nome: string;
   moduloAtual: string | null;
+  liderId: string | null;
 };
 
 export async function criarTurma(dados: NovaTurma): Promise<TurmaAdmin> {

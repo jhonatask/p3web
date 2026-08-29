@@ -2,7 +2,15 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { listarTurmas, listarCursos, type TurmaAdmin, type Curso, type StatusTurma } from "@/lib/api";
+import {
+  listarTurmas,
+  listarCursos,
+  listarLideres,
+  type TurmaAdmin,
+  type Curso,
+  type Lider,
+  type StatusTurma,
+} from "@/lib/api";
 import FormularioNovaTurma from "@/components/FormularioNovaTurma";
 import CampoTexto from "@/components/CampoTexto";
 import CampoSelecaoUnica, { type OpcaoSelecao } from "@/components/CampoSelecaoUnica";
@@ -18,6 +26,7 @@ const OPCOES_STATUS: OpcaoSelecao<FiltroStatus>[] = [
 export default function PaginaTurmas() {
   const [turmas, setTurmas] = useState<TurmaAdmin[] | null>(null);
   const [cursos, setCursos] = useState<Curso[]>([]);
+  const [lideres, setLideres] = useState<Lider[]>([]);
   const [erro, setErro] = useState<string | null>(null);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [filtroStatus, setFiltroStatus] = useState<FiltroStatus>("ATIVA");
@@ -25,12 +34,14 @@ export default function PaginaTurmas() {
 
   async function carregar(status: FiltroStatus) {
     try {
-      const [listaTurmas, listaCursos] = await Promise.all([
+      const [listaTurmas, listaCursos, listaLideres] = await Promise.all([
         listarTurmas(undefined, status === "TODAS" ? undefined : (status as StatusTurma)),
         listarCursos(true),
+        listarLideres(),
       ]);
       setTurmas(listaTurmas);
       setCursos(listaCursos);
+      setLideres(listaLideres);
     } catch {
       setErro("Não foi possível carregar as turmas.");
     }
@@ -61,6 +72,7 @@ export default function PaginaTurmas() {
       {mostrarFormulario && (
         <FormularioNovaTurma
           cursos={cursos}
+          lideres={lideres}
           onCriada={() => {
             setMostrarFormulario(false);
             carregar(filtroStatus);
@@ -101,6 +113,7 @@ export default function PaginaTurmas() {
               <tr>
                 <th className="px-4 py-3">Turma</th>
                 <th className="px-4 py-3">Curso</th>
+                <th className="px-4 py-3">Líder</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3"></th>
               </tr>
@@ -110,6 +123,7 @@ export default function PaginaTurmas() {
                 <tr key={turma.id} className="border-b border-neutral-100 last:border-0">
                   <td className="px-4 py-3 font-medium text-neutral-900">{turma.nome}</td>
                   <td className="px-4 py-3 text-neutral-600">{turma.cursoNome}</td>
+                  <td className="px-4 py-3 text-neutral-600">{turma.liderNome ?? "—"}</td>
                   <td className="px-4 py-3">
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs font-medium ${
