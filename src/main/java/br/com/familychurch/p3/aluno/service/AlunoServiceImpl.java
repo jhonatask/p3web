@@ -3,6 +3,7 @@ package br.com.familychurch.p3.aluno.service;
 import br.com.familychurch.p3.aluno.Aluno;
 import br.com.familychurch.p3.aluno.dto.AlunoResponse;
 import br.com.familychurch.p3.aluno.dto.MatriculaResponse;
+import br.com.familychurch.p3.aluno.exception.AlunoNaoEncontradoException;
 import br.com.familychurch.p3.aluno.exception.TokenMatriculaInvalidoException;
 import br.com.familychurch.p3.aluno.exception.TurmaNaoAceitaMatriculaException;
 import br.com.familychurch.p3.aluno.repository.AlunoRepository;
@@ -64,6 +65,14 @@ public class AlunoServiceImpl implements AlunoService {
 		boolean jaEstavaMatriculado = alunoRepository.findByParticipanteId(participante.getId()).isPresent();
 		Aluno matricula = matricularSeNecessario(participante.getId(), turmaId);
 		return new MatriculaResponse(matricula.getTurma().getId(), matricula.getTurma().getNome(), jaEstavaMatriculado);
+	}
+
+	@Override
+	public void removerDaTurma(UUID turmaId, UUID alunoId) {
+		Aluno aluno = alunoRepository.findById(alunoId)
+				.filter(candidato -> candidato.getTurma().getId().equals(turmaId))
+				.orElseThrow(() -> new AlunoNaoEncontradoException(turmaId, alunoId));
+		alunoRepository.delete(aluno);
 	}
 
 	private void validarTokenMatricula(Participante participante, String token) {

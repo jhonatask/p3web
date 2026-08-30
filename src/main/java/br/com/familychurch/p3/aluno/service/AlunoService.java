@@ -25,4 +25,11 @@ public interface AlunoService {
 	 */
 	MatriculaResponse matricularDireto(String cpf, String token, UUID turmaId);
 
+	/**
+	 * Desfaz a matricula do aluno na turma - usado quando alguem se matricula
+	 * na turma errada por engano. Como participante_id e unico em Aluno,
+	 * remover libera o participante pra matricular na turma certa depois.
+	 */
+	void removerDaTurma(UUID turmaId, UUID alunoId);
+
 }

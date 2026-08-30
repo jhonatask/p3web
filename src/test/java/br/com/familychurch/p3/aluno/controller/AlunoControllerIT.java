@@ -1,6 +1,7 @@
 package br.com.familychurch.p3.aluno.controller;
 
 import static org.hamcrest.Matchers.hasSize;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -8,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import br.com.familychurch.p3.IntegrationTestSupport;
+import br.com.familychurch.p3.aluno.Aluno;
 import br.com.familychurch.p3.aluno.repository.AlunoRepository;
 import br.com.familychurch.p3.aula.repository.AulaRepository;
 import br.com.familychurch.p3.avaliacao.repository.AvaliacaoRepository;
@@ -22,6 +24,7 @@ import br.com.familychurch.p3.turma.Turma;
 import br.com.familychurch.p3.turma.repository.TurmaRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -144,6 +147,61 @@ class AlunoControllerIT extends IntegrationTestSupport {
 						{"cpf": "%s", "token": "%s"}
 						""".formatted(CPF_VALIDO, token)))
 				.andExpect(status().isForbidden());
+	}
+
+	@Test
+	void deveRemoverAlunoDaTurma() throws Exception {
+		cadastrarParticipante(CPF_VALIDO, "Joao Silva");
+		mockMvc.perform(put("/api/turmas/{turmaId}/agenda", turmaAtiva.getId())
+				.with(autenticado())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"itens": [{"tipoAulaId": "%s", "data": "%s"}]}
+						""".formatted(obterTipoAulaPorNumero(1), LocalDate.now())));
+		mockMvc.perform(post("/api/publico/turmas/{token}/chamada", turmaAtiva.getTokenCadastro())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"cpf": "%s"}
+						""".formatted(CPF_VALIDO)));
+		Aluno aluno = alunoRepository.findAll().get(0);
+
+		mockMvc.perform(delete("/api/turmas/{turmaId}/alunos/{alunoId}", turmaAtiva.getId(), aluno.getId())
+				.with(autenticado()))
+				.andExpect(status().isNoContent());
+
+		mockMvc.perform(get("/api/turmas/{turmaId}/alunos", turmaAtiva.getId())
+				.with(autenticado()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$", hasSize(0)));
+	}
+
+	@Test
+	void deveRetornar404AoRemoverAlunoDeOutraTurma() throws Exception {
+		cadastrarParticipante(CPF_VALIDO, "Joao Silva");
+		mockMvc.perform(put("/api/turmas/{turmaId}/agenda", turmaAtiva.getId())
+				.with(autenticado())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"itens": [{"tipoAulaId": "%s", "data": "%s"}]}
+						""".formatted(obterTipoAulaPorNumero(1), LocalDate.now())));
+		mockMvc.perform(post("/api/publico/turmas/{token}/chamada", turmaAtiva.getTokenCadastro())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"cpf": "%s"}
+						""".formatted(CPF_VALIDO)));
+		Aluno aluno = alunoRepository.findAll().get(0);
+		Turma outraTurma = criarTurma(StatusTurma.ATIVA);
+
+		mockMvc.perform(delete("/api/turmas/{turmaId}/alunos/{alunoId}", outraTurma.getId(), aluno.getId())
+				.with(autenticado()))
+				.andExpect(status().isNotFound());
+	}
+
+	@Test
+	void deveRetornar404AoRemoverAlunoInexistente() throws Exception {
+		mockMvc.perform(delete("/api/turmas/{turmaId}/alunos/{alunoId}", turmaAtiva.getId(), UUID.randomUUID())
+				.with(autenticado()))
+				.andExpect(status().isNotFound());
 	}
 
 	private String cadastrarParticipante(String cpf, String nome) throws Exception {
