@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useId, useState } from "react";
+import { FormEvent, useEffect, useId, useState } from "react";
 import { criarTurma, ErroApi, type Curso, type TurmaAdmin } from "@/lib/api";
 import CampoTexto from "./CampoTexto";
 import CampoSelect from "./CampoSelect";
@@ -18,6 +18,12 @@ export default function FormularioNovaTurma({ cursos, onCriada, onCancelar }: Fo
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const idBase = useId();
+
+  useEffect(() => {
+    if (cursos.length > 0 && !cursos.some((curso) => curso.id === cursoId)) {
+      setCursoId(cursos[0].id);
+    }
+  }, [cursos, cursoId]);
 
   async function aoEnviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
