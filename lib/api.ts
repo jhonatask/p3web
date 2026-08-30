@@ -543,6 +543,42 @@ export async function listarAulasDaTurma(turmaId: string): Promise<AulaAdmin[]> 
   return tratarResposta<AulaAdmin[]>(resposta);
 }
 
+export async function buscarAulaPorId(aulaId: string): Promise<AulaAdmin> {
+  const resposta = await fetchAutenticado(`/api/aulas/${aulaId}`);
+  return tratarResposta<AulaAdmin>(resposta);
+}
+
+export type MetodoPresenca = "FORMULARIO" | "MANUAL";
+
+export type PresencaAdmin = {
+  id: string;
+  participanteId: string;
+  participanteNome: string;
+  turmaId: string;
+  aulaId: string;
+  timestampCheckin: string;
+  metodo: MetodoPresenca;
+  origem: OrigemPresenca;
+  turmaOrigemNome: string | null;
+  validadoPorId: string | null;
+  validadoPorNome: string | null;
+};
+
+export async function listarPresencasDaAula(aulaId: string): Promise<PresencaAdmin[]> {
+  const resposta = await fetchAutenticado(`/api/aulas/${aulaId}/presencas`);
+  return tratarResposta<PresencaAdmin[]>(resposta);
+}
+
+/** Registro retroativo/presencial: o líder marca a presença de um aluno já matriculado sem depender do link de chamada. */
+export async function marcarPresencaManual(aulaId: string, cpf: string): Promise<PresencaAdmin> {
+  const resposta = await fetchAutenticado(`/api/aulas/${aulaId}/presencas/manual`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ cpf }),
+  });
+  return tratarResposta<PresencaAdmin>(resposta);
+}
+
 export async function encerrarAulaAtual(turmaId: string): Promise<AulaAdmin | null> {
   const resposta = await fetchAutenticado(`/api/turmas/${turmaId}/agenda/atual/encerrar`, { method: "PATCH" });
   if (resposta.status === 204) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { definirAgenda, ErroApi, type AulaAdmin, type TipoAulaResponse } from "@/lib/api";
 
 type FormularioAgendaProps = {
@@ -113,6 +114,14 @@ export default function FormularioAgenda({ turmaId, tiposAula, aulas, onAtualiza
                   >
                     {ROTULOS_STATUS[status] ?? status}
                   </span>
+                )}
+                {aula && (
+                  <Link
+                    href={`/turmas/${turmaId}/aulas/${aula.id}`}
+                    className="text-sm font-medium text-neutral-700 hover:underline"
+                  >
+                    Presença
+                  </Link>
                 )}
                 <input
                   type="date"
