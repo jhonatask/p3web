@@ -665,6 +665,15 @@ export async function listarAlunosDaTurma(turmaId: string): Promise<AlunoAdmin[]
   return tratarResposta<AlunoAdmin[]>(resposta);
 }
 
+/** Desfaz a matrícula (ex.: aluno cadastrado na turma errada). */
+export async function removerAlunoDaTurma(turmaId: string, alunoId: string): Promise<void> {
+  const resposta = await fetchAutenticado(`/api/turmas/${turmaId}/alunos/${alunoId}`, { method: "DELETE" });
+  if (!resposta.ok) {
+    const corpo = (await resposta.json()) as ApiErrorBody;
+    throw new ErroApi(corpo);
+  }
+}
+
 export type AulaDashboardItem = {
   aulaId: string;
   numero: number;

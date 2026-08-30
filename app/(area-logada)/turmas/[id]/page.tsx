@@ -8,6 +8,7 @@ import {
   listarTiposAulaDoCurso,
   listarAulasDaTurma,
   listarAlunosDaTurma,
+  removerAlunoDaTurma,
   encerrarTurma,
   encerrarAulaAtual,
   desativarAulaAtual,
@@ -18,7 +19,10 @@ import {
   type AulaAdmin,
   type AlunoAdmin,
 } from "@/lib/api";
+import { mascararCpfParcial } from "@/lib/masks";
+import { paginar, totalDePaginas } from "@/lib/paginacao";
 import FormularioAgenda from "@/components/FormularioAgenda";
+import Paginador from "@/components/Paginador";
 
 export default function PaginaGestaoTurma() {
   const params = useParams<{ id: string }>();
@@ -31,6 +35,7 @@ export default function PaginaGestaoTurma() {
   const [erro, setErro] = useState<string | null>(null);
   const [mensagem, setMensagem] = useState<string | null>(null);
   const [qrUrl, setQrUrl] = useState<string | null>(null);
+  const [paginaAlunos, setPaginaAlunos] = useState(1);
 
   async function carregar() {
     try {
@@ -111,6 +116,19 @@ export default function PaginaGestaoTurma() {
       setAulas(aulasAtualizadas);
     } catch (erroCapturado) {
       setErro(erroCapturado instanceof ErroApi ? erroCapturado.message : "Não foi possível desativar a aula.");
+    }
+  }
+
+  async function aoRemoverAluno(aluno: AlunoAdmin) {
+    if (!confirm(`Remover ${aluno.nome} desta turma? Use pra matrícula feita na turma errada.`)) {
+      return;
+    }
+    setErro(null);
+    try {
+      await removerAlunoDaTurma(turmaId, aluno.id);
+      setAlunos((atual) => atual.filter((item) => item.id !== aluno.id));
+    } catch (erroCapturado) {
+      setErro(erroCapturado instanceof ErroApi ? erroCapturado.message : "Não foi possível remover o aluno.");
     }
   }
 
@@ -241,19 +259,32 @@ export default function PaginaGestaoTurma() {
                 <tr>
                   <th className="px-4 py-3">Nome</th>
                   <th className="px-4 py-3">CPF</th>
-                  <th className="px-4 py-3">Campus</th>
+                  <th className="px-4 py-3"></th>
                 </tr>
               </thead>
               <tbody>
-                {alunos.map((aluno) => (
+                {paginar(alunos, paginaAlunos).map((aluno) => (
                   <tr key={aluno.id} className="border-b border-neutral-100 last:border-0">
                     <td className="px-4 py-3 font-medium text-neutral-900">{aluno.nome}</td>
-                    <td className="px-4 py-3 text-neutral-600">{aluno.cpf}</td>
-                    <td className="px-4 py-3 text-neutral-600">{aluno.campus ?? "—"}</td>
+                    <td className="px-4 py-3 text-neutral-600">{mascararCpfParcial(aluno.cpf)}</td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => aoRemoverAluno(aluno)}
+                        className="text-sm font-medium text-red-700 hover:underline"
+                      >
+                        Remover
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            <Paginador
+              pagina={paginaAlunos}
+              totalPaginas={totalDePaginas(alunos.length)}
+              onMudarPagina={setPaginaAlunos}
+            />
           </div>
         )}
       </div>

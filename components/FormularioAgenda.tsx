@@ -118,9 +118,17 @@ export default function FormularioAgenda({ turmaId, tiposAula, aulas, onAtualiza
                 {aula && (
                   <Link
                     href={`/turmas/${turmaId}/aulas/${aula.id}`}
-                    className="text-sm font-medium text-neutral-700 hover:underline"
+                    aria-label="Presença"
+                    title="Presença"
+                    className="rounded-lg p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-800"
                   >
-                    Presença
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="size-5">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2m-6 9 2 2 4-4"
+                      />
+                    </svg>
                   </Link>
                 )}
                 <input

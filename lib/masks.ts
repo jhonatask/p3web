@@ -11,6 +11,12 @@ export function mascararCpf(valor: string): string {
   return resultado;
 }
 
+/** Exibe só os 3 primeiros dígitos do CPF - usado em listagens onde o CPF completo não precisa aparecer. */
+export function mascararCpfParcial(valor: string): string {
+  const digitos = somenteDigitos(valor);
+  return `${digitos.slice(0, 3)}.***.***-**`;
+}
+
 export function mascararCep(valor: string): string {
   const digitos = somenteDigitos(valor).slice(0, 8);
   if (digitos.length <= 5) {

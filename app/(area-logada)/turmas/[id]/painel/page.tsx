@@ -13,6 +13,8 @@ import {
   type ModuloAula,
   type TurmaDashboard,
 } from "@/lib/api";
+import { paginar, totalDePaginas } from "@/lib/paginacao";
+import Paginador from "@/components/Paginador";
 
 const ROTULOS_MODULO: Record<ModuloAula, string> = {
   INTRODUTORIO: "Introdutório",
@@ -49,6 +51,8 @@ export default function PaginaPainelTurma() {
   const [dashboard, setDashboard] = useState<TurmaDashboard | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [linkGerando, setLinkGerando] = useState<string | null>(null);
+  const [paginaFaltas, setPaginaFaltas] = useState(1);
+  const [paginaAlunos, setPaginaAlunos] = useState(1);
 
   async function carregar() {
     try {
@@ -131,11 +135,18 @@ export default function PaginaPainelTurma() {
             {painel.ultimasFaltas.length === 0 ? (
               <p className="mt-2 text-sm text-emerald-700">Ninguém faltou.</p>
             ) : (
-              <ul className="mt-2 list-inside list-disc text-sm text-neutral-700">
-                {painel.ultimasFaltas.map((falta) => (
-                  <li key={falta.participanteId}>{falta.nome}</li>
-                ))}
-              </ul>
+              <>
+                <ul className="mt-2 list-inside list-disc text-sm text-neutral-700">
+                  {paginar(painel.ultimasFaltas, paginaFaltas).map((falta) => (
+                    <li key={falta.participanteId}>{falta.nome}</li>
+                  ))}
+                </ul>
+                <Paginador
+                  pagina={paginaFaltas}
+                  totalPaginas={totalDePaginas(painel.ultimasFaltas.length)}
+                  onMudarPagina={setPaginaFaltas}
+                />
+              </>
             )}
           </>
         )}
@@ -194,7 +205,7 @@ export default function PaginaPainelTurma() {
               </tr>
             </thead>
             <tbody>
-              {painel.linhas.map((linha) => (
+              {paginar(painel.linhas, paginaAlunos).map((linha) => (
                 <tr key={linha.participanteId} className="border-b border-neutral-100 last:border-0">
                   <td className="px-4 py-3 font-medium text-neutral-900">{linha.nome}</td>
                   {MODULOS_FORMATURA.map((modulo) => (
@@ -236,6 +247,11 @@ export default function PaginaPainelTurma() {
               ))}
             </tbody>
           </table>
+          <Paginador
+            pagina={paginaAlunos}
+            totalPaginas={totalDePaginas(painel.linhas.length)}
+            onMudarPagina={setPaginaAlunos}
+          />
         </div>
       )}
     </div>
