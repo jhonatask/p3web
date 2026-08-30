@@ -326,14 +326,15 @@ type SupabaseTokenResponse = {
   access_token: string;
   user: {
     email: string | null;
-    user_metadata?: { full_name?: string };
+    user_metadata?: { nome?: string; full_name?: string; name?: string };
   };
 };
 
 /**
  * Login deixou de ser deste backend - vai direto no Supabase Auth (mesmo
  * provedor que emite o token validado via JWKS no backend). O nome exibido
- * vem do user_metadata (quando a conta tem full_name) ou do e-mail.
+ * vem do user_metadata (nome, full_name ou name, na mesma ordem que
+ * core.provisionar_usuario usa pra resolver o nome da pessoa) ou do e-mail.
  */
 export async function login(email: string, senha: string): Promise<LoginResponse> {
   const resposta = await fetch(`${obterSupabaseUrl()}/auth/v1/token?grant_type=password`, {
@@ -355,9 +356,10 @@ export async function login(email: string, senha: string): Promise<LoginResponse
   }
 
   const corpo = (await resposta.json()) as SupabaseTokenResponse;
+  const metadata = corpo.user.user_metadata;
   return {
     accessToken: corpo.access_token,
-    nome: corpo.user.user_metadata?.full_name ?? corpo.user.email ?? email,
+    nome: metadata?.nome ?? metadata?.full_name ?? metadata?.name ?? corpo.user.email ?? email,
   };
 }
 
