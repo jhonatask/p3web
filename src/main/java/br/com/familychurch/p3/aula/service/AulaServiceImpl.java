@@ -89,7 +89,7 @@ public class AulaServiceImpl implements AulaService {
 
 	@Override
 	public AulaResponse buscarAulaAtiva(UUID turmaId) {
-		sincronizarStatusPorData(turmaId);
+		promoverAulasVencidas(turmaId);
 		List<Aula> ativas = aulaRepository.findByTurmaIdAndStatusOrderByTipoAulaOrdemAsc(turmaId, StatusAula.ATIVA);
 		if (ativas.isEmpty()) {
 			throw new NenhumaAulaAtivaException(turmaId);
@@ -109,7 +109,7 @@ public class AulaServiceImpl implements AulaService {
 
 	@Override
 	public Optional<AulaResponse> encerrarAulaAtual(UUID turmaId) {
-		sincronizarStatusPorData(turmaId);
+		promoverAulasVencidas(turmaId);
 		List<Aula> ativas = aulaRepository.findByTurmaIdAndStatusOrderByTipoAulaOrdemAsc(turmaId, StatusAula.ATIVA);
 		if (ativas.isEmpty()) {
 			throw new NenhumaAulaAtivaException(turmaId);
@@ -130,7 +130,7 @@ public class AulaServiceImpl implements AulaService {
 
 	@Override
 	public void desativarAulaAtual(UUID turmaId) {
-		sincronizarStatusPorData(turmaId);
+		promoverAulasVencidas(turmaId);
 		List<Aula> ativas = aulaRepository.findByTurmaIdAndStatusOrderByTipoAulaOrdemAsc(turmaId, StatusAula.ATIVA);
 		if (ativas.isEmpty()) {
 			throw new NenhumaAulaAtivaException(turmaId);
@@ -170,6 +170,28 @@ public class AulaServiceImpl implements AulaService {
 			aula.setStatus(StatusAula.ATIVA);
 		} else if (aula.getStatus() == StatusAula.ATIVA && aula.getData().isBefore(hoje)) {
 			aula.setStatus(StatusAula.ENCERRADA);
+		}
+	}
+
+	/**
+	 * So promove AGENDADA -> ATIVA (nunca fecha uma ATIVA por data). Usada
+	 * antes de ler/agir sobre "a aula ativa" (buscarAulaAtiva,
+	 * encerrarAulaAtual, desativarAulaAtual): se essas chamadas rodassem a
+	 * sincronizacao completa, uma aula ATIVA com data no passado - por
+	 * exemplo uma aula cadastrada hoje mas com data da semana passada, um
+	 * registro retroativo legitimo - seria fechada ali mesmo, um instante
+	 * antes da checagem de "existe aula ativa?", e o lider (ou o aluno
+	 * fazendo a chamada) recebia NenhumaAulaAtivaException mesmo a aula tendo
+	 * acabado de aparecer como ativa. O fechamento por data continua
+	 * acontecendo em definirAgenda (protege contra redefinir a data de uma
+	 * aula pra tras sem querer) e no job noturno/de subida.
+	 */
+	private void promoverAulasVencidas(UUID turmaId) {
+		LocalDate hoje = LocalDate.now();
+		for (Aula aula : aulaRepository.findByTurmaId(turmaId)) {
+			if (aula.getStatus() == StatusAula.AGENDADA && !aula.getData().isAfter(hoje)) {
+				aula.setStatus(StatusAula.ATIVA);
+			}
 		}
 	}
 

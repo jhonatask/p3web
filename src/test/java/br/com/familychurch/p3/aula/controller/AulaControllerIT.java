@@ -189,6 +189,29 @@ class AulaControllerIT extends IntegrationTestSupport {
 	}
 
 	@Test
+	void deveEncerrarAulaCadastradaRetroativamenteComoAtiva() throws Exception {
+		// registro retroativo: aula que aconteceu na semana passada, cadastrada
+		// hoje numa unica chamada de definirAgenda - antes fechava sozinha
+		// (por causa da sincronizacao por data) um instante antes do lider
+		// clicar em "Encerrar aula atual", devolvendo 404.
+		UUID tipoAula1 = obterTipoAulaPorNumero(1);
+		definirAgenda(turmaAtiva.getId(), tipoAula1, LocalDate.now().minusDays(7));
+
+		mockMvc.perform(get("/api/publico/turmas/{token}/aula-ativa", turmaAtiva.getTokenCadastro()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.status").value("ATIVA"));
+
+		mockMvc.perform(patch("/api/turmas/{turmaId}/agenda/atual/encerrar", turmaAtiva.getId())
+				.with(autenticado()))
+				.andExpect(status().isNoContent());
+
+		mockMvc.perform(get("/api/turmas/{turmaId}/aulas", turmaAtiva.getId())
+				.with(autenticado()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$[0].status").value("ENCERRADA"));
+	}
+
+	@Test
 	void deveRetornar409AoRedefinirDataDeAulaEncerradaAutomaticamente() throws Exception {
 		UUID tipoAula1 = obterTipoAulaPorNumero(1);
 		// vira ATIVA (data == hoje) e depois ENCERRADA automaticamente pela
