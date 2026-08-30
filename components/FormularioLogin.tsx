@@ -2,6 +2,7 @@
 
 import { FormEvent, useId, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { login, ErroApi } from "@/lib/api";
 import { salvarSessao } from "@/lib/auth";
 import CampoTexto from "./CampoTexto";
@@ -68,6 +69,12 @@ export default function FormularioLogin() {
       >
         {enviando ? "Entrando..." : "Entrar"}
       </button>
+
+      <p className="text-center text-sm">
+        <Link href="/recuperar-senha" className="text-neutral-600 hover:underline">
+          Esqueceu a senha?
+        </Link>
+      </p>
     </form>
   );
 }
