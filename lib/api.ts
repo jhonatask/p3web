@@ -361,6 +361,73 @@ export async function login(email: string, senha: string): Promise<LoginResponse
   };
 }
 
+/** Dispara o e-mail com o código de recuperação (tela 1 do "esqueci minha senha"). */
+export async function solicitarCodigoRecuperacao(email: string): Promise<void> {
+  const resposta = await fetch(`${obterSupabaseUrl()}/auth/v1/recover`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: obterSupabaseAnonKey(),
+    },
+    body: JSON.stringify({ email }),
+  });
+
+  if (!resposta.ok) {
+    throw new ErroApi({
+      mensagem: "Não foi possível enviar o código. Tente novamente.",
+      status: resposta.status,
+      timestamp: new Date().toISOString(),
+      erros: null,
+    });
+  }
+}
+
+/** Confere o código de 6 dígitos recebido por e-mail e devolve o token pra trocar a senha (tela 2). */
+export async function confirmarCodigoRecuperacao(email: string, codigo: string): Promise<string> {
+  const resposta = await fetch(`${obterSupabaseUrl()}/auth/v1/verify`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: obterSupabaseAnonKey(),
+    },
+    body: JSON.stringify({ type: "recovery", email, token: codigo }),
+  });
+
+  if (!resposta.ok) {
+    throw new ErroApi({
+      mensagem: "Código inválido ou expirado. Solicite um novo código.",
+      status: resposta.status,
+      timestamp: new Date().toISOString(),
+      erros: null,
+    });
+  }
+
+  const corpo = (await resposta.json()) as SupabaseTokenResponse;
+  return corpo.access_token;
+}
+
+/** Grava a senha nova usando o token devolvido por confirmarCodigoRecuperacao. */
+export async function redefinirSenha(tokenRecuperacao: string, novaSenha: string): Promise<void> {
+  const resposta = await fetch(`${obterSupabaseUrl()}/auth/v1/user`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: obterSupabaseAnonKey(),
+      Authorization: `Bearer ${tokenRecuperacao}`,
+    },
+    body: JSON.stringify({ password: novaSenha }),
+  });
+
+  if (!resposta.ok) {
+    throw new ErroApi({
+      mensagem: "Não foi possível salvar a senha nova. Tente novamente.",
+      status: resposta.status,
+      timestamp: new Date().toISOString(),
+      erros: null,
+    });
+  }
+}
+
 export type Curso = {
   id: string;
   nome: string;
