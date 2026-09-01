@@ -476,6 +476,34 @@ export async function criarTurma(dados: NovaTurma): Promise<TurmaAdmin> {
   return tratarResposta<TurmaAdmin>(resposta);
 }
 
+export type MeResponse = {
+  podeDelegarLiderP3: boolean;
+};
+
+export async function obterMe(): Promise<MeResponse> {
+  const resposta = await fetchAutenticado("/api/me");
+  return tratarResposta<MeResponse>(resposta);
+}
+
+export type NovoLiderTurma = {
+  nome: string;
+  email: string;
+};
+
+export type LiderTurma = {
+  atribuicaoId: string;
+  pessoaId: string;
+};
+
+export async function concederLiderTurma(turmaId: string, dados: NovoLiderTurma): Promise<LiderTurma> {
+  const resposta = await fetchAutenticado(`/api/turmas/${turmaId}/lideres`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(dados),
+  });
+  return tratarResposta<LiderTurma>(resposta);
+}
+
 export async function listarTurmas(cursoId?: string, status?: StatusTurma): Promise<TurmaAdmin[]> {
   const parametros = new URLSearchParams();
   if (cursoId) parametros.set("cursoId", cursoId);

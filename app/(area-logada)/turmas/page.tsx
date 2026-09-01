@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { listarTurmas, listarCursos, type TurmaAdmin, type Curso, type StatusTurma } from "@/lib/api";
+import { listarTurmas, listarCursos, obterMe, type TurmaAdmin, type Curso, type StatusTurma } from "@/lib/api";
 import FormularioNovaTurma from "@/components/FormularioNovaTurma";
+import FormularioLiderTurma from "@/components/FormularioLiderTurma";
 import CampoTexto from "@/components/CampoTexto";
 import CampoSelecaoUnica, { type OpcaoSelecao } from "@/components/CampoSelecaoUnica";
 
@@ -22,6 +23,8 @@ export default function PaginaTurmas() {
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [filtroStatus, setFiltroStatus] = useState<FiltroStatus>("ATIVA");
   const [busca, setBusca] = useState("");
+  const [podeDelegarLiderP3, setPodeDelegarLiderP3] = useState(false);
+  const [turmaParaLider, setTurmaParaLider] = useState<TurmaAdmin | null>(null);
 
   async function carregar(status: FiltroStatus) {
     try {
@@ -40,6 +43,12 @@ export default function PaginaTurmas() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- busca dados sempre que o filtro de status muda
     carregar(filtroStatus);
   }, [filtroStatus]);
+
+  useEffect(() => {
+    obterMe()
+      .then((me) => setPodeDelegarLiderP3(me.podeDelegarLiderP3))
+      .catch(() => setPodeDelegarLiderP3(false));
+  }, []);
 
   const turmasFiltradas = (turmas ?? []).filter((turma) =>
     turma.nome.toLowerCase().includes(busca.trim().toLowerCase()),
@@ -66,6 +75,17 @@ export default function PaginaTurmas() {
             carregar(filtroStatus);
           }}
           onCancelar={() => setMostrarFormulario(false)}
+        />
+      )}
+
+      {turmaParaLider && (
+        <FormularioLiderTurma
+          turma={turmaParaLider}
+          onDefinido={() => {
+            setTurmaParaLider(null);
+            carregar(filtroStatus);
+          }}
+          onCancelar={() => setTurmaParaLider(null)}
         />
       )}
 
@@ -119,10 +139,59 @@ export default function PaginaTurmas() {
                       {turma.status === "ATIVA" ? "Ativa" : "Encerrada"}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <Link href={`/turmas/${turma.id}`} className="text-sm font-medium text-neutral-900 hover:underline">
-                      Gerenciar
-                    </Link>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-1">
+                      {podeDelegarLiderP3 && (
+                        <button
+                          type="button"
+                          onClick={() => setTurmaParaLider(turma)}
+                          aria-label={`Definir líder de ${turma.nome}`}
+                          title="Definir líder"
+                          className="rounded-lg p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-800"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth={1.8}
+                            className="size-5"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z"
+                            />
+                          </svg>
+                        </button>
+                      )}
+                      <Link
+                        href={`/turmas/${turma.id}`}
+                        aria-label={`Gerenciar ${turma.nome}`}
+                        title="Gerenciar"
+                        className="rounded-lg p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-800"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={1.8}
+                          className="size-5"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M16.862 4.487l1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"
+                          />
+                        </svg>
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}
