@@ -21,6 +21,7 @@ export default function FormularioNovaTurma({ cursos, onCriada, onCancelar }: Fo
 
   useEffect(() => {
     if (cursos.length > 0 && !cursos.some((curso) => curso.id === cursoId)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCursoId(cursos[0].id);
     }
   }, [cursos, cursoId]);

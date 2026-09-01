@@ -326,14 +326,15 @@ type SupabaseTokenResponse = {
   access_token: string;
   user: {
     email: string | null;
-    user_metadata?: { full_name?: string };
+    user_metadata?: { nome?: string; full_name?: string; name?: string };
   };
 };
 
 /**
  * Login deixou de ser deste backend - vai direto no Supabase Auth (mesmo
  * provedor que emite o token validado via JWKS no backend). O nome exibido
- * vem do user_metadata (quando a conta tem full_name) ou do e-mail.
+ * vem do user_metadata (nome, full_name ou name, na mesma ordem que
+ * core.provisionar_usuario usa pra resolver o nome da pessoa) ou do e-mail.
  */
 export async function login(email: string, senha: string): Promise<LoginResponse> {
   const resposta = await fetch(`${obterSupabaseUrl()}/auth/v1/token?grant_type=password`, {
@@ -355,9 +356,10 @@ export async function login(email: string, senha: string): Promise<LoginResponse
   }
 
   const corpo = (await resposta.json()) as SupabaseTokenResponse;
+  const metadata = corpo.user.user_metadata;
   return {
     accessToken: corpo.access_token,
-    nome: corpo.user.user_metadata?.full_name ?? corpo.user.email ?? email,
+    nome: metadata?.nome ?? metadata?.full_name ?? metadata?.name ?? corpo.user.email ?? email,
   };
 }
 
@@ -541,6 +543,42 @@ export async function listarAulasDaTurma(turmaId: string): Promise<AulaAdmin[]> 
   return tratarResposta<AulaAdmin[]>(resposta);
 }
 
+export async function buscarAulaPorId(aulaId: string): Promise<AulaAdmin> {
+  const resposta = await fetchAutenticado(`/api/aulas/${aulaId}`);
+  return tratarResposta<AulaAdmin>(resposta);
+}
+
+export type MetodoPresenca = "FORMULARIO" | "MANUAL";
+
+export type PresencaAdmin = {
+  id: string;
+  participanteId: string;
+  participanteNome: string;
+  turmaId: string;
+  aulaId: string;
+  timestampCheckin: string;
+  metodo: MetodoPresenca;
+  origem: OrigemPresenca;
+  turmaOrigemNome: string | null;
+  validadoPorId: string | null;
+  validadoPorNome: string | null;
+};
+
+export async function listarPresencasDaAula(aulaId: string): Promise<PresencaAdmin[]> {
+  const resposta = await fetchAutenticado(`/api/aulas/${aulaId}/presencas`);
+  return tratarResposta<PresencaAdmin[]>(resposta);
+}
+
+/** Registro retroativo/presencial: o líder marca a presença de um aluno já matriculado sem depender do link de chamada. */
+export async function marcarPresencaManual(aulaId: string, cpf: string): Promise<PresencaAdmin> {
+  const resposta = await fetchAutenticado(`/api/aulas/${aulaId}/presencas/manual`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ cpf }),
+  });
+  return tratarResposta<PresencaAdmin>(resposta);
+}
+
 export async function encerrarAulaAtual(turmaId: string): Promise<AulaAdmin | null> {
   const resposta = await fetchAutenticado(`/api/turmas/${turmaId}/agenda/atual/encerrar`, { method: "PATCH" });
   if (resposta.status === 204) {
@@ -625,6 +663,15 @@ export type AlunoAdmin = {
 export async function listarAlunosDaTurma(turmaId: string): Promise<AlunoAdmin[]> {
   const resposta = await fetchAutenticado(`/api/turmas/${turmaId}/alunos`);
   return tratarResposta<AlunoAdmin[]>(resposta);
+}
+
+/** Desfaz a matrícula (ex.: aluno cadastrado na turma errada). */
+export async function removerAlunoDaTurma(turmaId: string, alunoId: string): Promise<void> {
+  const resposta = await fetchAutenticado(`/api/turmas/${turmaId}/alunos/${alunoId}`, { method: "DELETE" });
+  if (!resposta.ok) {
+    const corpo = (await resposta.json()) as ApiErrorBody;
+    throw new ErroApi(corpo);
+  }
 }
 
 export type AulaDashboardItem = {
