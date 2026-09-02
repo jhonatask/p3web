@@ -443,16 +443,6 @@ export default function FormularioCadastroBase({
           autoComplete="bday"
         />
 
-        <CampoSelect
-          id={`${idBase}-campus`}
-          label="Campus que você frequenta"
-          valor={campos.campusId}
-          onChange={(valor) => atualizarCampo("campusId", valor)}
-          opcoes={campi.map((campus) => ({ valor: campus.id, rotulo: campus.nome }))}
-          erro={erros.campusId}
-          placeholder={campi.length === 0 ? "Carregando campi..." : "Selecione"}
-        />
-
         <CampoSelecaoUnica
           label="Estado civil"
           opcoes={OPCOES_ESTADO_CIVIL}
@@ -566,6 +556,16 @@ export default function FormularioCadastroBase({
 
       <section className="space-y-4">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Vida na Family</h2>
+
+        <CampoSelect
+          id={`${idBase}-campus`}
+          label="Campus que você frequenta"
+          valor={campos.campusId}
+          onChange={(valor) => atualizarCampo("campusId", valor)}
+          opcoes={campi.map((campus) => ({ valor: campus.id, rotulo: campus.nome }))}
+          erro={erros.campusId}
+          placeholder={campi.length === 0 ? "Carregando campi..." : "Selecione"}
+        />
 
         <CampoSelecaoUnica
           label="Quanto tempo na Family?"
