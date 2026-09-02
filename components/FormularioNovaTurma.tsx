@@ -1,18 +1,20 @@
 "use client";
 
 import { FormEvent, useEffect, useId, useState } from "react";
-import { criarTurma, ErroApi, type Curso, type TurmaAdmin } from "@/lib/api";
+import { criarTurma, ErroApi, type Campus, type Curso, type TurmaAdmin } from "@/lib/api";
 import CampoTexto from "./CampoTexto";
 import CampoSelect from "./CampoSelect";
 
 type FormularioNovaTurmaProps = {
   cursos: Curso[];
+  campi: Campus[];
   onCriada: (turma: TurmaAdmin) => void;
   onCancelar: () => void;
 };
 
-export default function FormularioNovaTurma({ cursos, onCriada, onCancelar }: FormularioNovaTurmaProps) {
+export default function FormularioNovaTurma({ cursos, campi, onCriada, onCancelar }: FormularioNovaTurmaProps) {
   const [cursoId, setCursoId] = useState(cursos[0]?.id ?? "");
+  const [campusId, setCampusId] = useState(campi[0]?.id ?? "");
   const [nome, setNome] = useState("");
   const [moduloAtual, setModuloAtual] = useState("");
   const [erro, setErro] = useState<string | null>(null);
@@ -26,12 +28,23 @@ export default function FormularioNovaTurma({ cursos, onCriada, onCancelar }: Fo
     }
   }, [cursos, cursoId]);
 
+  useEffect(() => {
+    if (campi.length > 0 && !campi.some((campus) => campus.id === campusId)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCampusId(campi[0].id);
+    }
+  }, [campi, campusId]);
+
   async function aoEnviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     setErro(null);
 
     if (!cursoId) {
       setErro("Selecione um curso.");
+      return;
+    }
+    if (!campusId) {
+      setErro("Selecione um campus.");
       return;
     }
     if (nome.trim().length === 0) {
@@ -41,7 +54,7 @@ export default function FormularioNovaTurma({ cursos, onCriada, onCancelar }: Fo
 
     setEnviando(true);
     try {
-      const turma = await criarTurma({ cursoId, nome: nome.trim(), moduloAtual: moduloAtual.trim() || null });
+      const turma = await criarTurma({ cursoId, campusId, nome: nome.trim(), moduloAtual: moduloAtual.trim() || null });
       onCriada(turma);
     } catch (erroCapturado) {
       setErro(erroCapturado instanceof ErroApi ? erroCapturado.message : "Não foi possível criar a turma.");
@@ -67,12 +80,21 @@ export default function FormularioNovaTurma({ cursos, onCriada, onCancelar }: Fo
         placeholder={cursos.length === 0 ? "Nenhum curso ativo" : undefined}
       />
 
+      <CampoSelect
+        id={`${idBase}-campus`}
+        label="Campus"
+        valor={campusId}
+        onChange={setCampusId}
+        opcoes={campi.map((campus) => ({ valor: campus.id, rotulo: campus.nome }))}
+        placeholder={campi.length === 0 ? "Nenhum campus ativo" : undefined}
+      />
+
       <CampoTexto
         id={`${idBase}-nome`}
         label="Nome da turma"
         valor={nome}
         onChange={setNome}
-        placeholder="Campus Central - Turma 15"
+        placeholder="Turma 15"
       />
 
       <CampoTexto
