@@ -14,6 +14,9 @@ import {
   type PresencaAdmin,
 } from "@/lib/api";
 import { mascararCpfParcial } from "@/lib/masks";
+import { paginar, totalDePaginas } from "@/lib/paginacao";
+import Paginador from "@/components/Paginador";
+import { IconeCheckCirculo, IconeUsuarios } from "@/components/Icones";
 
 export default function PaginaPresencaAula() {
   const params = useParams<{ id: string; aulaId: string }>();
@@ -25,6 +28,7 @@ export default function PaginaPresencaAula() {
   const [presencas, setPresencas] = useState<PresencaAdmin[]>([]);
   const [erro, setErro] = useState<string | null>(null);
   const [marcando, setMarcando] = useState<string | null>(null);
+  const [pagina, setPagina] = useState(1);
 
   async function carregar() {
     try {
@@ -87,6 +91,10 @@ export default function PaginaPresencaAula() {
           {new Date(`${aula.data}T00:00:00`).toLocaleDateString("pt-BR")} — presença manual pra alunos que não fizeram
           a chamada pelo link.
         </p>
+        <p className="mt-2 flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-neutral-500">
+          <IconeUsuarios className="h-4 w-4 text-neutral-400" />
+          Alunos ({alunos.length})
+        </p>
       </div>
 
       {erro && (
@@ -109,7 +117,7 @@ export default function PaginaPresencaAula() {
               </tr>
             </thead>
             <tbody>
-              {alunos.map((aluno) => {
+              {paginar(alunos, pagina).map((aluno) => {
                 const presenca = presencaPorCpf.get(aluno.cpf);
                 return (
                   <tr key={aluno.id} className="border-b border-neutral-100 last:border-0">
@@ -132,9 +140,11 @@ export default function PaginaPresencaAula() {
                           type="button"
                           onClick={() => aoMarcarPresenca(aluno.cpf)}
                           disabled={marcando === aluno.cpf}
-                          className="text-sm font-medium text-neutral-900 hover:underline disabled:text-neutral-400"
+                          title="Marcar presença"
+                          aria-label={`Marcar presença de ${aluno.nome}`}
+                          className="inline-flex rounded p-1.5 text-neutral-700 transition-colors hover:bg-neutral-100 disabled:text-neutral-300"
                         >
-                          {marcando === aluno.cpf ? "Marcando..." : "Marcar presença"}
+                          <IconeCheckCirculo className={marcando === aluno.cpf ? "h-4 w-4 animate-pulse" : "h-4 w-4"} />
                         </button>
                       )}
                     </td>
@@ -143,6 +153,7 @@ export default function PaginaPresencaAula() {
               })}
             </tbody>
           </table>
+          <Paginador pagina={pagina} totalPaginas={totalDePaginas(alunos.length)} onMudarPagina={setPagina} />
         </div>
       )}
     </div>

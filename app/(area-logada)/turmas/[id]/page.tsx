@@ -23,6 +23,7 @@ import { mascararCpfParcial } from "@/lib/masks";
 import { paginar, totalDePaginas } from "@/lib/paginacao";
 import FormularioAgenda from "@/components/FormularioAgenda";
 import Paginador from "@/components/Paginador";
+import { IconeLixeira, IconeUsuarios } from "@/components/Icones";
 
 export default function PaginaGestaoTurma() {
   const params = useParams<{ id: string }>();
@@ -245,7 +246,8 @@ export default function PaginaGestaoTurma() {
       </div>
 
       <div>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">
+        <h2 className="mb-3 flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-neutral-500">
+          <IconeUsuarios className="h-4 w-4 text-neutral-400" />
           Alunos matriculados ({alunos.length})
         </h2>
         {alunos.length === 0 ? (
@@ -271,9 +273,11 @@ export default function PaginaGestaoTurma() {
                       <button
                         type="button"
                         onClick={() => aoRemoverAluno(aluno)}
-                        className="text-sm font-medium text-red-700 hover:underline"
+                        title="Remover da turma"
+                        aria-label={`Remover ${aluno.nome} da turma`}
+                        className="inline-flex rounded p-1.5 text-red-700 transition-colors hover:bg-red-50"
                       >
-                        Remover
+                        <IconeLixeira className="h-4 w-4" />
                       </button>
                     </td>
                   </tr>
