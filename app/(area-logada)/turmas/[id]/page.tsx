@@ -8,6 +8,7 @@ import {
   listarTiposAulaDoCurso,
   listarAulasDaTurma,
   listarAlunosDaTurma,
+  listarCampus,
   removerAlunoDaTurma,
   encerrarTurma,
   encerrarAulaAtual,
@@ -18,10 +19,12 @@ import {
   type TipoAulaResponse,
   type AulaAdmin,
   type AlunoAdmin,
+  type Campus,
 } from "@/lib/api";
 import { mascararCpfParcial } from "@/lib/masks";
 import { paginar, totalDePaginas } from "@/lib/paginacao";
 import FormularioAgenda from "@/components/FormularioAgenda";
+import FormularioEditarTurma from "@/components/FormularioEditarTurma";
 import Paginador from "@/components/Paginador";
 import { IconeLixeira, IconeUsuarios } from "@/components/Icones";
 
@@ -33,6 +36,8 @@ export default function PaginaGestaoTurma() {
   const [tiposAula, setTiposAula] = useState<TipoAulaResponse[]>([]);
   const [aulas, setAulas] = useState<AulaAdmin[]>([]);
   const [alunos, setAlunos] = useState<AlunoAdmin[]>([]);
+  const [campi, setCampi] = useState<Campus[]>([]);
+  const [editando, setEditando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [mensagem, setMensagem] = useState<string | null>(null);
   const [qrUrl, setQrUrl] = useState<string | null>(null);
@@ -42,14 +47,16 @@ export default function PaginaGestaoTurma() {
     try {
       const turmaCarregada = await buscarTurmaAdmin(turmaId);
       setTurma(turmaCarregada);
-      const [tipos, aulasCarregadas, alunosCarregados] = await Promise.all([
+      const [tipos, aulasCarregadas, alunosCarregados, campiCarregados] = await Promise.all([
         listarTiposAulaDoCurso(turmaCarregada.cursoId),
         listarAulasDaTurma(turmaId),
         listarAlunosDaTurma(turmaId),
+        listarCampus(true),
       ]);
       setTiposAula(tipos);
       setAulas(aulasCarregadas);
       setAlunos(alunosCarregados);
+      setCampi(campiCarregados);
     } catch {
       setErro("Não foi possível carregar a turma.");
     }
@@ -156,7 +163,9 @@ export default function PaginaGestaoTurma() {
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-xl font-semibold text-neutral-900">{turma.nome}</h1>
-            <p className="text-sm text-neutral-600">{turma.cursoNome}</p>
+            <p className="text-sm text-neutral-600">
+              {turma.cursoNome} · {turma.campusNome ?? "Sem campus definido"}
+            </p>
           </div>
           <div className="flex gap-2">
             <Link
@@ -165,6 +174,13 @@ export default function PaginaGestaoTurma() {
             >
               Formatura e reposição
             </Link>
+            <button
+              type="button"
+              onClick={() => setEditando((atual) => !atual)}
+              className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 transition-colors hover:border-neutral-400"
+            >
+              {editando ? "Fechar edição" : "Editar turma"}
+            </button>
             {turma.status === "ATIVA" && (
               <button
                 type="button"
@@ -177,6 +193,18 @@ export default function PaginaGestaoTurma() {
           </div>
         </div>
       </div>
+
+      {editando && (
+        <FormularioEditarTurma
+          turma={turma}
+          campi={campi}
+          onAtualizada={(turmaAtualizada) => {
+            setTurma(turmaAtualizada);
+            setEditando(false);
+          }}
+          onCancelar={() => setEditando(false)}
+        />
+      )}
 
       {erro && (
         <div role="alert" className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
