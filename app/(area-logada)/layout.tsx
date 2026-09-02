@@ -44,6 +44,20 @@ export default function LayoutAreaLogada({ children }: { children: React.ReactNo
           <div className="flex items-center gap-4 text-sm text-neutral-600">
             <span>Olá, {nome}</span>
             <Link
+              href="/campus"
+              aria-label="Campus"
+              title="Campus"
+              className="rounded-lg p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-800"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="size-5">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3.75 21h16.5M4.5 21V9.75L12 4.5l7.5 5.25V21M9 21v-6.75h6V21"
+                />
+              </svg>
+            </Link>
+            <Link
               href="/configuracoes"
               aria-label="Configurações"
               title="Configurações"

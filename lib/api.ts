@@ -113,6 +113,7 @@ export type ParticipanteCadastroRequest = {
   cpf: string;
   celular: string;
   email: string;
+  campusId: string;
   dataNascimento: string;
   estadoCivil: EstadoCivil;
   temFilhos: boolean;
@@ -162,6 +163,7 @@ export type ParticipanteEdicao = {
   cpf: string;
   celular: string;
   email: string | null;
+  campusId: string | null;
   dataNascimento: string;
   estadoCivil: EstadoCivil;
   temFilhos: boolean;
@@ -443,6 +445,50 @@ export async function listarCursos(ativo?: boolean): Promise<Curso[]> {
   return tratarResposta<Curso[]>(resposta);
 }
 
+export type Campus = {
+  id: string;
+  nome: string;
+  ativo: boolean;
+};
+
+export async function listarCampus(ativo?: boolean): Promise<Campus[]> {
+  const query = ativo === undefined ? "" : `?ativo=${ativo}`;
+  const resposta = await fetchAutenticado(`/api/campus${query}`);
+  return tratarResposta<Campus[]>(resposta);
+}
+
+export async function listarCampusPublico(): Promise<Campus[]> {
+  const resposta = await fetch(`${obterUrlBase()}/api/publico/campus`, { cache: "no-store" });
+  return tratarResposta<Campus[]>(resposta);
+}
+
+export type NovoCampus = {
+  nome: string;
+};
+
+export async function criarCampus(dados: NovoCampus): Promise<Campus> {
+  const resposta = await fetchAutenticado("/api/campus", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(dados),
+  });
+  return tratarResposta<Campus>(resposta);
+}
+
+export async function atualizarCampus(id: string, dados: NovoCampus): Promise<Campus> {
+  const resposta = await fetchAutenticado(`/api/campus/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(dados),
+  });
+  return tratarResposta<Campus>(resposta);
+}
+
+export async function desativarCampus(id: string): Promise<Campus> {
+  const resposta = await fetchAutenticado(`/api/campus/${id}/desativar`, { method: "PATCH" });
+  return tratarResposta<Campus>(resposta);
+}
+
 export async function listarTiposAulaDoCurso(cursoId: string): Promise<TipoAulaResponse[]> {
   const resposta = await fetchAutenticado(`/api/cursos/${cursoId}/tipos-aula`);
   return tratarResposta<TipoAulaResponse[]>(resposta);
@@ -454,6 +500,8 @@ export type TurmaAdmin = {
   id: string;
   cursoId: string;
   cursoNome: string;
+  campusId: string | null;
+  campusNome: string | null;
   nome: string;
   moduloAtual: string | null;
   tokenCadastro: string;
@@ -463,6 +511,7 @@ export type TurmaAdmin = {
 
 export type NovaTurma = {
   cursoId: string;
+  campusId: string;
   nome: string;
   moduloAtual: string | null;
 };

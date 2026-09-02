@@ -1,9 +1,11 @@
 "use client";
 
-import { FormEvent, useId, useState } from "react";
+import { FormEvent, useEffect, useId, useState } from "react";
 import {
   cadastrarParticipante,
+  listarCampusPublico,
   ErroApi,
+  type Campus,
   type EstadoCivil,
   type ParticipanteCadastrado,
   type ParticipanteCadastroRequest,
@@ -15,6 +17,7 @@ import { validarCpf } from "@/lib/cpf";
 import { somenteDigitos } from "@/lib/texto";
 import { buscarEnderecoPorCep } from "@/lib/viacep";
 import CampoTexto from "./CampoTexto";
+import CampoSelect from "./CampoSelect";
 import CampoSelecaoUnica, { type OpcaoSelecao } from "./CampoSelecaoUnica";
 import CampoMultiplaEscolha from "./CampoMultiplaEscolha";
 import CampoSimNao from "./CampoSimNao";
@@ -52,6 +55,7 @@ type CamposFormulario = {
   cpf: string;
   celular: string;
   email: string;
+  campusId: string;
   dataNascimento: string;
   estadoCivil: EstadoCivil | null;
   temFilhos: boolean | null;
@@ -86,6 +90,7 @@ const CAMPOS_INICIAIS: CamposFormulario = {
   cpf: "",
   celular: "",
   email: "",
+  campusId: "",
   dataNascimento: "",
   estadoCivil: null,
   temFilhos: null,
@@ -141,6 +146,7 @@ function camposAPartirDaEdicao(dados: ParticipanteEdicao): CamposFormulario {
     cpf: mascararCpf(dados.cpf),
     celular: mascararCelular(dados.celular),
     email: campoOuVazio(dados.email),
+    campusId: campoOuVazio(dados.campusId),
     dataNascimento: dados.dataNascimento,
     estadoCivil: dados.estadoCivil,
     temFilhos: dados.temFilhos,
@@ -186,6 +192,10 @@ function validarCampos(campos: CamposFormulario): ErrosFormulario {
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(campos.email.trim())) {
     erros.email = "Informe um e-mail válido.";
+  }
+
+  if (campos.campusId.trim().length === 0) {
+    erros.campusId = "Selecione o campus que você frequenta.";
   }
 
   if (!campos.dataNascimento) {
@@ -263,7 +273,14 @@ export default function FormularioCadastroBase({
   const [alertaGeral, setAlertaGeral] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [buscandoCep, setBuscandoCep] = useState(false);
+  const [campi, setCampi] = useState<Campus[]>([]);
   const idBase = useId();
+
+  useEffect(() => {
+    listarCampusPublico()
+      .then(setCampi)
+      .catch(() => setCampi([]));
+  }, []);
 
   function atualizarCampo<CampoNome extends keyof CamposFormulario>(
     campo: CampoNome,
@@ -313,6 +330,7 @@ export default function FormularioCadastroBase({
       cpf: somenteDigitos(campos.cpf),
       celular: somenteDigitos(campos.celular),
       email: campos.email.trim(),
+      campusId: campos.campusId,
       dataNascimento: campos.dataNascimento,
       estadoCivil: campos.estadoCivil as EstadoCivil,
       temFilhos: campos.temFilhos === true,
@@ -423,6 +441,16 @@ export default function FormularioCadastroBase({
           onChange={(valor) => atualizarCampo("dataNascimento", valor)}
           erro={erros.dataNascimento}
           autoComplete="bday"
+        />
+
+        <CampoSelect
+          id={`${idBase}-campus`}
+          label="Campus que você frequenta"
+          valor={campos.campusId}
+          onChange={(valor) => atualizarCampo("campusId", valor)}
+          opcoes={campi.map((campus) => ({ valor: campus.id, rotulo: campus.nome }))}
+          erro={erros.campusId}
+          placeholder={campi.length === 0 ? "Carregando campi..." : "Selecione"}
         />
 
         <CampoSelecaoUnica
