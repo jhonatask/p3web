@@ -525,6 +525,21 @@ export async function criarTurma(dados: NovaTurma): Promise<TurmaAdmin> {
   return tratarResposta<TurmaAdmin>(resposta);
 }
 
+export type AtualizarTurma = {
+  campusId: string;
+  nome: string;
+  moduloAtual: string | null;
+};
+
+export async function atualizarTurma(id: string, dados: AtualizarTurma): Promise<TurmaAdmin> {
+  const resposta = await fetchAutenticado(`/api/turmas/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(dados),
+  });
+  return tratarResposta<TurmaAdmin>(resposta);
+}
+
 export type MeResponse = {
   podeDelegarLiderP3: boolean;
 };
