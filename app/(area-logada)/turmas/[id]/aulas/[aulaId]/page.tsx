@@ -13,6 +13,7 @@ import {
   type AlunoAdmin,
   type PresencaAdmin,
 } from "@/lib/api";
+import { mascararCpfParcial } from "@/lib/masks";
 
 export default function PaginaPresencaAula() {
   const params = useParams<{ id: string; aulaId: string }>();
@@ -113,7 +114,7 @@ export default function PaginaPresencaAula() {
                 return (
                   <tr key={aluno.id} className="border-b border-neutral-100 last:border-0">
                     <td className="px-4 py-3 font-medium text-neutral-900">{aluno.nome}</td>
-                    <td className="px-4 py-3 text-neutral-600">{aluno.cpf}</td>
+                    <td className="px-4 py-3 text-neutral-600">{mascararCpfParcial(aluno.cpf)}</td>
                     <td className="px-4 py-3">
                       {presenca ? (
                         <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
