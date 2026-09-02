@@ -16,6 +16,7 @@ import FormularioNovaTurma from "@/components/FormularioNovaTurma";
 import FormularioLiderTurma from "@/components/FormularioLiderTurma";
 import CampoTexto from "@/components/CampoTexto";
 import CampoSelecaoUnica, { type OpcaoSelecao } from "@/components/CampoSelecaoUnica";
+import { IconeCampus } from "@/components/Icones";
 
 type FiltroStatus = "ATIVA" | "ENCERRADA" | "TODAS";
 
@@ -70,13 +71,25 @@ export default function PaginaTurmas() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-neutral-900">Turmas</h1>
-        <button
-          type="button"
-          onClick={() => setMostrarFormulario((atual) => !atual)}
-          className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-800"
-        >
-          {mostrarFormulario ? "Fechar" : "Nova turma"}
-        </button>
+        <div className="flex items-center gap-2">
+          {podeDelegarLiderP3 && (
+            <Link
+              href="/campus"
+              aria-label="Gerenciar campus"
+              title="Gerenciar campus"
+              className="rounded-lg border border-neutral-300 p-2 text-neutral-500 transition-colors hover:border-neutral-400 hover:bg-neutral-100 hover:text-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-800"
+            >
+              <IconeCampus className="h-5 w-5" />
+            </Link>
+          )}
+          <button
+            type="button"
+            onClick={() => setMostrarFormulario((atual) => !atual)}
+            className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-800"
+          >
+            {mostrarFormulario ? "Fechar" : "Nova turma"}
+          </button>
+        </div>
       </div>
 
       {mostrarFormulario && (

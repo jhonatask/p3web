@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { listarCampus, criarCampus, atualizarCampus, desativarCampus, ErroApi, type Campus } from "@/lib/api";
 import CampoTexto from "@/components/CampoTexto";
-import { IconeCheckCirculo, IconeUsuarios } from "@/components/Icones";
+import { IconeCheckCirculo, IconeLapis, IconeProibir, IconeUsuarios } from "@/components/Icones";
 
 export default function PaginaCampus() {
   const [campi, setCampi] = useState<Campus[] | null>(null);
@@ -156,17 +156,21 @@ export default function PaginaCampus() {
                         <button
                           type="button"
                           onClick={() => aoIniciarEdicao(campus)}
-                          className="text-sm font-medium text-neutral-700 hover:underline"
+                          title="Editar"
+                          aria-label={`Editar campus ${campus.nome}`}
+                          className="inline-flex rounded p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
                         >
-                          Editar
+                          <IconeLapis className="h-4 w-4" />
                         </button>
                         {campus.ativo && (
                           <button
                             type="button"
                             onClick={() => aoDesativar(campus)}
-                            className="text-sm font-medium text-red-700 hover:underline"
+                            title="Desativar"
+                            aria-label={`Desativar campus ${campus.nome}`}
+                            className="inline-flex rounded p-1.5 text-red-700 transition-colors hover:bg-red-50"
                           >
-                            Desativar
+                            <IconeProibir className="h-4 w-4" />
                           </button>
                         )}
                       </div>
