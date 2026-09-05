@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "P3",
-  description: "Cadastro, chamada e área do líder da Plataforma P3.",
+  description: "Ministério P3 — Provisão, Proteção, Plataforma.",
 };
 
 export const viewport: Viewport = {

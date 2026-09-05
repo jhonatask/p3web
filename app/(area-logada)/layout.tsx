@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
 import { estaAutenticado, limparSessao, obterNomeLogado } from "@/lib/auth";
 
@@ -38,7 +39,8 @@ export default function LayoutAreaLogada({ children }: { children: React.ReactNo
     <div className="min-h-screen bg-neutral-50">
       <header className="border-b border-neutral-200 bg-white px-4 py-3">
         <div className="mx-auto flex max-w-5xl items-center justify-between">
-          <Link href="/inicio" className="text-sm font-semibold text-neutral-900">
+          <Link href="/inicio" className="flex items-center gap-2 text-sm font-semibold text-neutral-900">
+            <Image src="/logo-p3.png" alt="" width={28} height={28} />
             P3 · Área do líder
           </Link>
           <div className="flex items-center gap-4 text-sm text-neutral-600">
