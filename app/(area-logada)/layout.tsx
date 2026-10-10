@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { estaAutenticado, limparSessao, obterNomeLogado } from "@/lib/auth";
+import { obterMe, ErroApi } from "@/lib/api";
 
 export default function LayoutAreaLogada({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -21,9 +22,20 @@ export default function LayoutAreaLogada({ children }: { children: React.ReactNo
       router.replace("/login");
       return;
     }
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza com localStorage, so existe no cliente
-    setNome(obterNomeLogado());
-    setPronto(true);
+    obterMe()
+      .then(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza com localStorage, so existe no cliente
+        setNome(obterNomeLogado());
+        setPronto(true);
+      })
+      .catch((erro) => {
+        if (erro instanceof ErroApi && erro.status === 403) {
+          router.replace("/sem-acesso");
+          return;
+        }
+        setNome(obterNomeLogado());
+        setPronto(true);
+      });
   }, [router]);
 
   function sair() {
